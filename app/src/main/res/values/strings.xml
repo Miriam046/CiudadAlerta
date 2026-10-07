@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Ciudad Alerta</string>
+    <string name="nav_home">Mis Reportes</string>
+    <string name="nav_create">Nuevo Reporte</string>
+    <string name="btn_save">Guardar</string>
+    <string name="lbl_description">Descripción del problema</string>
+    <string name="chk_urgent">Marcar como urgente</string>
+</resources>
