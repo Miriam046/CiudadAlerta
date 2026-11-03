@@ -40,9 +40,9 @@ fun CiudadAlertaApp(
             )
             FeedReportesScreen(
                 viewModel = viewModel,
-                onNavigateToLogin = { navController.navigate("login") },
-                onNavigateToCreate = { navController.navigate("reportar") },
-                onNavigateToDetail = { ticketId -> navController.navigate("detalle/$ticketId") }
+                onNavigateToLogin = { navController.navigate("login") { launchSingleTop = true } },
+                onNavigateToCreate = { navController.navigate("reportar") { launchSingleTop = true } },
+                onNavigateToDetail = { ticketId -> navController.navigate("detalle/$ticketId") { launchSingleTop = true } }
             )
         }
 

@@ -57,10 +57,12 @@ class DetalleViewModel(
 
     fun markAsSolucionado() {
         val currentTicket = _uiState.value.ticket ?: return
+        val encargadoEmail = sessionManager.encargadoEmail.value
+        
         viewModelScope.launch {
             _uiState.update { it.copy(isUpdatingStatus = true) }
             try {
-                repository.updateTicketStatus(currentTicket, 3) // 3: Solucionado
+                repository.updateTicketStatus(currentTicket, 3, solucionadoPor = encargadoEmail) // 3: Solucionado
                 _uiState.update { it.copy(isUpdatingStatus = false) }
             } catch (e: Exception) {
                 _uiState.update {

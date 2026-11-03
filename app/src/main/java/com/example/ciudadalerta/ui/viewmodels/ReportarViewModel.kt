@@ -48,26 +48,51 @@ class ReportarViewModel(private val repository: TicketRepository) : ViewModel() 
     }
 
     fun submitReport(onSuccess: () -> Unit) {
-        val current = _uiState.value
-        if (current.descripcion.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Por favor ingresa una descripción del problema.") }
-            return
+        var shouldReturn = false
+        var currentDesc = ""
+        var currentLat = 0.0
+        var currentLon = 0.0
+        var currentFoto: String? = null
+        var currentCat = 1
+        var isUrg = false
+        
+        // Actualización atómica del estado para asegurar que solo un clic pase la validación
+        _uiState.update { current ->
+            if (current.isSaving || current.isSuccess) {
+                shouldReturn = true
+                return@update current
+            }
+            if (current.descripcion.isBlank()) {
+                shouldReturn = true
+                return@update current.copy(errorMessage = "Por favor ingresa una descripción del problema.")
+            }
+            
+            currentDesc = current.descripcion
+            currentLat = current.latitud
+            currentLon = current.longitud
+            currentFoto = current.fotoRuta
+            currentCat = current.categoriaId
+            isUrg = current.isUrgent
+            
+            current.copy(isSaving = true)
         }
 
+        if (shouldReturn) return
+
         viewModelScope.launch {
-            _uiState.update { it.copy(isSaving = true) }
             try {
                 // Si es urgente, estatus es 1 (Crítico/Registrado)
-                val estatusId = if (current.isUrgent) 1 else 1
+                val estatusId = if (isUrg) 1 else 1
                 repository.addTicket(
-                    descripcion = current.descripcion.trim(),
-                    lat = current.latitud,
-                    lon = current.longitud,
-                    fotoRuta = current.fotoRuta,
-                    categoriaId = current.categoriaId,
+                    descripcion = currentDesc.trim(),
+                    lat = currentLat,
+                    lon = currentLon,
+                    fotoRuta = currentFoto,
+                    categoriaId = currentCat,
                     estatusId = estatusId
                 )
-                _uiState.update { it.copy(isSaving = false, isSuccess = true) }
+                // Se mantiene isSuccess = true e isSaving = true para bloquear cualquier toque adicional durante la transición/cierre de la pantalla
+                _uiState.update { it.copy(isSaving = true, isSuccess = true) }
                 onSuccess()
             } catch (e: Exception) {
                 _uiState.update { it.copy(isSaving = false, errorMessage = "Error al guardar el reporte: ${e.localizedMessage}") }

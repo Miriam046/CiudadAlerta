@@ -217,6 +217,33 @@ fun DetalleTicketScreen(
                                 )
                             }
                         }
+
+                        if (ticket.estatusId == 3 && !ticket.solucionadoPor.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(14.dp))
+                            
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = StatusSolucionadoGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = "Solucionado por",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = ticket.solucionadoPor,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 14.sp,
+                                        color = StatusSolucionadoGreen
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 

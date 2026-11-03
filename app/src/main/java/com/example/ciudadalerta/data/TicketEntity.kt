@@ -14,5 +14,6 @@ data class TicketEntity(
     val categoriaId: Int = 1, // 1: Bache, 2: Alumbrado, 3: Agua/Fuga, 4: Seguridad, 5: Basura
     val estatusId: Int = 1,   // 1: Registrado, 2: Evaluación, 3: Solucionado
     val isSynced: Boolean = false, // Bandera para sincronización offline-first
-    val isDeleted: Boolean = false // Soft delete para sincronización offline
+    val isDeleted: Boolean = false, // Soft delete para sincronización offline
+    val solucionadoPor: String? = null // Encargado que solucionó el ticket
 )

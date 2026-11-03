@@ -46,8 +46,8 @@ class TicketRepository(
         syncTicketToApi(savedTicket)
     }
 
-    suspend fun updateTicketStatus(ticket: TicketEntity, newEstatusId: Int) {
-        val updated = ticket.copy(estatusId = newEstatusId, isSynced = false)
+    suspend fun updateTicketStatus(ticket: TicketEntity, newEstatusId: Int, solucionadoPor: String? = null) {
+        val updated = ticket.copy(estatusId = newEstatusId, solucionadoPor = solucionadoPor, isSynced = false)
         ticketDao.updateTicket(updated)
         syncTicketToApi(updated)
     }
@@ -96,7 +96,8 @@ class TicketRepository(
                 descripcion = ticket.descripcion,
                 latitud = ticket.latitud,
                 longitud = ticket.longitud,
-                estatusId = ticket.estatusId
+                estatusId = ticket.estatusId,
+                solucionadoPor = ticket.solucionadoPor
             )
             val response = api.createTicket(dto)
             if (response.isSuccessful) {

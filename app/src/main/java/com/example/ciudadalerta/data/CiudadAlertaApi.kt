@@ -13,7 +13,8 @@ data class TicketDto(
     val descripcion: String,
     val latitud: Double,
     val longitud: Double,
-    val estatusId: Int
+    val estatusId: Int,
+    val solucionadoPor: String? = null
 )
 
 interface CiudadAlertaApi {
