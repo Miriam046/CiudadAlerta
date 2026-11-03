@@ -1,18 +1,20 @@
 package com.example.ciudadalerta.data
 
+import android.content.Context
 import android.util.Log
+import androidx.work.Constraints
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import com.example.ciudadalerta.data.worker.SyncWorker
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.onStart
 
 class TicketRepository(
     private val ticketDao: TicketDao,
     private val api: CiudadAlertaApi? = null
 ) {
-    // Lectura reactiva desde la base de datos local (Room) con precarga de datos semilla si está vacía
-    val allTickets: Flow<List<TicketEntity>> = ticketDao.getAllTickets()
-        .onStart {
-            prepopulateIfEmpty()
-        }
+    // Fuente única de la verdad: tickets activos no eliminados
+    val allTickets: Flow<List<TicketEntity>> = ticketDao.getAllActiveTickets()
 
     fun getTicketById(id: Int): Flow<TicketEntity?> = ticketDao.getTicketById(id)
 
@@ -32,14 +34,15 @@ class TicketRepository(
             fotoRutaLocal = fotoRuta,
             categoriaId = categoriaId,
             estatusId = estatusId,
-            isSynced = false
+            isSynced = false,
+            isDeleted = false
         )
 
         // 1. Guardar localmente siempre (Offline-first)
         val generatedId = ticketDao.insertTicket(newTicket)
         val savedTicket = newTicket.copy(id = generatedId.toInt())
 
-        // 2. Intentar enviar a la API (Retrofit)
+        // 2. Intentar enviar a la API
         syncTicketToApi(savedTicket)
     }
 
@@ -49,11 +52,40 @@ class TicketRepository(
         syncTicketToApi(updated)
     }
 
+    suspend fun deleteTicket(id: Int) {
+        // Soft delete para sincronización offline
+        ticketDao.softDeleteTicket(id)
+    }
+
     suspend fun syncPendingTickets() {
-        val unsynced = ticketDao.getUnsyncedTickets()
+        val unsynced = ticketDao.getUnsyncedCreatedTickets()
         for (ticket in unsynced) {
             syncTicketToApi(ticket)
         }
+
+        val pendingDeleted = ticketDao.getPendingDeletedTickets()
+        for (ticket in pendingDeleted) {
+            try {
+                if (api != null && ticket.id > 0) {
+                    api.deleteTicket(ticket.id)
+                }
+                ticketDao.hardDeleteTicket(ticket.id)
+            } catch (e: Exception) {
+                Log.e("Sync", "Error eliminando en API: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    fun scheduleBackgroundSync(context: Context) {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val syncRequest = OneTimeWorkRequestBuilder<SyncWorker>()
+            .setConstraints(constraints)
+            .build()
+
+        WorkManager.getInstance(context).enqueue(syncRequest)
     }
 
     private suspend fun syncTicketToApi(ticket: TicketEntity) {
@@ -69,16 +101,9 @@ class TicketRepository(
             val response = api.createTicket(dto)
             if (response.isSuccessful) {
                 ticketDao.updateTicket(ticket.copy(isSynced = true))
-                Log.d("TicketRepository", "Ticket #${ticket.id} sincronizado exitosamente con el backend.")
             }
         } catch (e: Exception) {
-            Log.e("Sync", "Sin conexión con servidor. Se mantendrá el guardado offline local: ${e.localizedMessage}")
+            Log.e("Sync", "Sin conexión con servidor. Almacenado offline: ${e.localizedMessage}")
         }
-    }
-
-    private suspend fun prepopulateIfEmpty() {
-        val unsynced = ticketDao.getUnsyncedTickets()
-        // If we want seed data when starting fresh:
-        // Note: we check if there are any tickets by fetching unsynced or inserting default tickets if empty
     }
 }

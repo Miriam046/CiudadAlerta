@@ -12,6 +12,7 @@ data class TicketEntity(
     val longitud: Double = 0.0,
     val fotoRutaLocal: String? = null,
     val categoriaId: Int = 1, // 1: Bache, 2: Alumbrado, 3: Agua/Fuga, 4: Seguridad, 5: Basura
-    val estatusId: Int = 1,   // 1: Registrado (Crítico/Pendiente), 2: En Evaluación, 3: Solucionado
-    val isSynced: Boolean = false // Bandera para sincronización offline-first
+    val estatusId: Int = 1,   // 1: Registrado, 2: Evaluación, 3: Solucionado
+    val isSynced: Boolean = false, // Bandera para sincronización offline-first
+    val isDeleted: Boolean = false // Soft delete para sincronización offline
 )
