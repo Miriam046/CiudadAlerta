@@ -1,5 +1,8 @@
 package com.example.ciudadalerta.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,17 +16,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.ReportProblem
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -35,6 +37,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -43,7 +46,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -52,7 +54,6 @@ import com.example.ciudadalerta.ui.components.CategoryBadge
 import com.example.ciudadalerta.ui.components.StatusChip
 import com.example.ciudadalerta.ui.components.SyncBadge
 import com.example.ciudadalerta.ui.theme.PrimaryCivicBlue
-import com.example.ciudadalerta.ui.theme.StatusEvaluacionOrange
 import com.example.ciudadalerta.ui.theme.StatusRegistradoRed
 import com.example.ciudadalerta.ui.theme.StatusSolucionadoGreen
 import com.example.ciudadalerta.ui.viewmodels.DetalleViewModel
@@ -159,7 +160,7 @@ fun DetalleTicketScreen(
 
                 // Information Card
                 Text(
-                    text = "Información General",
+                    text = "Información de la Alerta",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -251,67 +252,79 @@ fun DetalleTicketScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                // CONDITIONAL ENCARGADO ADMIN SECTION
+                if (state.isEncargadoLoggedIn) {
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                // Actions Card: Status Management
-                Text(
-                    text = "Gestión del Estatus",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Actualizar estado del reporte en el sistema:",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Button(
-                                onClick = { viewModel.updateTicketStatus(1) },
-                                colors = ButtonDefaults.buttonColors(containerColor = StatusRegistradoRed),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.ReportProblem, contentDescription = null, modifier = Modifier.size(14.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Registrado", fontSize = 11.sp)
-                                }
+                    AnimatedVisibility(visible = true, enter = fadeIn(), exit = fadeOut()) {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Shield,
+                                    contentDescription = null,
+                                    tint = PrimaryCivicBlue,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Panel de Administración (Encargado)",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrimaryCivicBlue
+                                )
                             }
 
-                            Button(
-                                onClick = { viewModel.updateTicketStatus(2) },
-                                colors = ButtonDefaults.buttonColors(containerColor = StatusEvaluacionOrange),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Build, contentDescription = null, modifier = Modifier.size(14.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Evaluación", fontSize = 11.sp)
-                                }
-                            }
+                            Spacer(modifier = Modifier.height(10.dp))
 
-                            Button(
-                                onClick = { viewModel.updateTicketStatus(3) },
-                                colors = ButtonDefaults.buttonColors(containerColor = StatusSolucionadoGreen),
-                                modifier = Modifier.weight(1f)
+                            Card(
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(14.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Solucionado", fontSize = 11.sp)
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "Acciones autorizadas para este ticket:",
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    Spacer(modifier = Modifier.height(14.dp))
+
+                                    // Button 1: Solucionado
+                                    Button(
+                                        onClick = { viewModel.markAsSolucionado() },
+                                        enabled = !state.isUpdatingStatus && ticket.estatusId != 3,
+                                        colors = ButtonDefaults.buttonColors(containerColor = StatusSolucionadoGreen),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(48.dp),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text("✅ Marcar como Solucionado", fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    // Button 2: Eliminar Reporte
+                                    OutlinedButton(
+                                        onClick = { viewModel.deleteReport(onSuccess = onBack) },
+                                        enabled = !state.isUpdatingStatus,
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusRegistradoRed),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(48.dp),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp), tint = StatusRegistradoRed)
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text("🗑️ Eliminar Reporte", fontWeight = FontWeight.Bold, color = StatusRegistradoRed)
+                                        }
+                                    }
                                 }
                             }
                         }

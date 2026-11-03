@@ -8,14 +8,18 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.ciudadalerta.data.AppDatabase
+import com.example.ciudadalerta.data.SessionManager
 import com.example.ciudadalerta.data.TicketRepository
-import com.example.ciudadalerta.ui.screens.DashboardScreen
 import com.example.ciudadalerta.ui.screens.DetalleTicketScreen
+import com.example.ciudadalerta.ui.screens.FeedReportesScreen
+import com.example.ciudadalerta.ui.screens.LoginEncargadoScreen
 import com.example.ciudadalerta.ui.screens.ReportarScreen
-import com.example.ciudadalerta.ui.viewmodels.DashboardViewModel
-import com.example.ciudadalerta.ui.viewmodels.DashboardViewModelFactory
 import com.example.ciudadalerta.ui.viewmodels.DetalleViewModel
 import com.example.ciudadalerta.ui.viewmodels.DetalleViewModelFactory
+import com.example.ciudadalerta.ui.viewmodels.FeedViewModel
+import com.example.ciudadalerta.ui.viewmodels.FeedViewModelFactory
+import com.example.ciudadalerta.ui.viewmodels.LoginViewModel
+import com.example.ciudadalerta.ui.viewmodels.LoginViewModelFactory
 import com.example.ciudadalerta.ui.viewmodels.ReportarViewModel
 import com.example.ciudadalerta.ui.viewmodels.ReportarViewModelFactory
 
@@ -25,18 +29,30 @@ fun CiudadAlertaApp(
 ) {
     val context = LocalContext.current
     val database = AppDatabase.getDatabase(context)
+    val sessionManager = SessionManager.getInstance(context)
     val repository = TicketRepository(database.ticketDao())
 
-    NavHost(navController = navController, startDestination = "dashboard") {
+    NavHost(navController = navController, startDestination = "feed_reportes") {
 
-        composable("dashboard") {
-            val viewModel: DashboardViewModel = viewModel(
-                factory = DashboardViewModelFactory(repository)
+        composable("feed_reportes") {
+            val viewModel: FeedViewModel = viewModel(
+                factory = FeedViewModelFactory(repository, sessionManager)
             )
-            DashboardScreen(
+            FeedReportesScreen(
                 viewModel = viewModel,
+                onNavigateToLogin = { navController.navigate("login") },
                 onNavigateToCreate = { navController.navigate("reportar") },
                 onNavigateToDetail = { ticketId -> navController.navigate("detalle/$ticketId") }
+            )
+        }
+
+        composable("login") {
+            val viewModel: LoginViewModel = viewModel(
+                factory = LoginViewModelFactory(sessionManager)
+            )
+            LoginEncargadoScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -53,7 +69,7 @@ fun CiudadAlertaApp(
         composable("detalle/{ticketId}") { backStackEntry ->
             val ticketId = backStackEntry.arguments?.getString("ticketId")?.toIntOrNull() ?: 0
             val viewModel: DetalleViewModel = viewModel(
-                factory = DetalleViewModelFactory(repository, ticketId)
+                factory = DetalleViewModelFactory(repository, sessionManager, ticketId)
             )
             DetalleTicketScreen(
                 viewModel = viewModel,
