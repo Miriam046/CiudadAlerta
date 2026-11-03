@@ -3,6 +3,7 @@ package com.example.ciudadalerta.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.ciudadalerta.data.SessionManager
 import com.example.ciudadalerta.data.TicketEntity
 import com.example.ciudadalerta.data.TicketRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,47 +13,52 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class DashboardUiState(
+data class FeedUiState(
     val tickets: List<TicketEntity> = emptyList(),
-    val totalAportaciones: Int = 0,
-    val ticketsCriticos: Int = 0,
-    val ticketsEnEvaluacion: Int = 0,
-    val ticketsSolucionados: Int = 0,
-    val unsyncedCount: Int = 0,
-    val isLoading: Boolean = true,
+    val totalIncidencias: Int = 0,
+    val solucionadasCount: Int = 0,
+    val isEncargadoLoggedIn: Boolean = false,
+    val isSyncing: Boolean = false,
     val searchQuery: String = "",
     val selectedCategoryFilter: Int? = null,
-    val isSyncing: Boolean = false
+    val isLoading: Boolean = true
 )
 
-class DashboardViewModel(private val repository: TicketRepository) : ViewModel() {
+class FeedViewModel(
+    private val repository: TicketRepository,
+    private val sessionManager: SessionManager
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(DashboardUiState())
-    val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(FeedUiState())
+    val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
 
     init {
-        loadTickets()
+        observeTickets()
+        observeSession()
     }
 
-    private fun loadTickets() {
+    private fun observeTickets() {
         viewModelScope.launch {
             repository.allTickets
-                .catch { e ->
-                    _uiState.update { it.copy(isLoading = false) }
-                }
+                .catch { _uiState.update { it.copy(isLoading = false) } }
                 .collect { tickets ->
                     _uiState.update { current ->
                         current.copy(
                             tickets = tickets,
-                            totalAportaciones = tickets.size,
-                            ticketsCriticos = tickets.count { it.estatusId == 1 },
-                            ticketsEnEvaluacion = tickets.count { it.estatusId == 2 },
-                            ticketsSolucionados = tickets.count { it.estatusId == 3 },
-                            unsyncedCount = tickets.count { !it.isSynced },
+                            totalIncidencias = tickets.size,
+                            solucionadasCount = tickets.count { it.estatusId == 3 },
                             isLoading = false
                         )
                     }
                 }
+        }
+    }
+
+    private fun observeSession() {
+        viewModelScope.launch {
+            sessionManager.isEncargadoLoggedIn.collect { isLoggedIn ->
+                _uiState.update { it.copy(isEncargadoLoggedIn = isLoggedIn) }
+            }
         }
     }
 
@@ -64,6 +70,10 @@ class DashboardViewModel(private val repository: TicketRepository) : ViewModel()
         _uiState.update { it.copy(selectedCategoryFilter = categoryId) }
     }
 
+    fun logout() {
+        sessionManager.logout()
+    }
+
     fun syncPending() {
         viewModelScope.launch {
             _uiState.update { it.copy(isSyncing = true) }
@@ -73,9 +83,12 @@ class DashboardViewModel(private val repository: TicketRepository) : ViewModel()
     }
 }
 
-class DashboardViewModelFactory(private val repository: TicketRepository) : ViewModelProvider.Factory {
+class FeedViewModelFactory(
+    private val repository: TicketRepository,
+    private val sessionManager: SessionManager
+) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return DashboardViewModel(repository) as T
+        return FeedViewModel(repository, sessionManager) as T
     }
 }

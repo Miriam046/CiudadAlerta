@@ -1,5 +1,9 @@
 package com.example.ciudadalerta.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,13 +22,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.ReportProblem
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -55,16 +61,15 @@ import androidx.compose.ui.unit.sp
 import com.example.ciudadalerta.ui.components.StatCard
 import com.example.ciudadalerta.ui.components.TicketCardItem
 import com.example.ciudadalerta.ui.theme.PrimaryCivicBlue
-import com.example.ciudadalerta.ui.theme.StatusEvaluacionOrange
-import com.example.ciudadalerta.ui.theme.StatusRegistradoRed
 import com.example.ciudadalerta.ui.theme.StatusSolucionadoGreen
 import com.example.ciudadalerta.ui.theme.SyncPendingIndigo
-import com.example.ciudadalerta.ui.viewmodels.DashboardViewModel
+import com.example.ciudadalerta.ui.viewmodels.FeedViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen(
-    viewModel: DashboardViewModel,
+fun FeedReportesScreen(
+    viewModel: FeedViewModel,
+    onNavigateToLogin: () -> Unit,
     onNavigateToCreate: () -> Unit,
     onNavigateToDetail: (Int) -> Unit
 ) {
@@ -88,31 +93,35 @@ fun DashboardScreen(
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                         Text(
-                            text = "Tablero Ciudadano de Incidencias",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                            text = if (state.isEncargadoLoggedIn) "Rol: Encargado Autorizado" else "Feed Público de Incidencias",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = PrimaryCivicBlue
-                ),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryCivicBlue),
                 actions = {
-                    if (state.unsyncedCount > 0) {
-                        IconButton(onClick = { viewModel.syncPending() }) {
-                            if (state.isSyncing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    color = Color.White,
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.CloudSync,
-                                    contentDescription = "Sincronizar",
-                                    tint = Color.White
-                                )
+                    if (state.isEncargadoLoggedIn) {
+                        Surface(
+                            color = Color.White.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.padding(end = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Shield, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Encargado", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
                             }
+                        }
+                        IconButton(onClick = { viewModel.logout() }) {
+                            Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Cerrar Sesión", tint = Color.White)
+                        }
+                    } else {
+                        IconButton(onClick = onNavigateToLogin) {
+                            Icon(Icons.Default.Lock, contentDescription = "Acceso Encargado", tint = Color.White)
                         }
                     }
                 }
@@ -125,7 +134,7 @@ fun DashboardScreen(
                 contentColor = Color.White,
                 shape = CircleShape
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Nuevo Reporte")
+                Icon(Icons.Default.Add, contentDescription = "Crear Reporte", modifier = Modifier.size(28.dp))
             }
         }
     ) { padding ->
@@ -135,53 +144,17 @@ fun DashboardScreen(
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Unsynced Alert Banner
-            if (state.unsyncedCount > 0) {
-                Surface(
-                    color = SyncPendingIndigo.copy(alpha = 0.12f),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.CloudSync,
-                                contentDescription = null,
-                                tint = SyncPendingIndigo,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "${state.unsyncedCount} reportes guardados offline",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = SyncPendingIndigo
-                            )
-                        }
-                        Button(
-                            onClick = { viewModel.syncPending() },
-                            colors = ButtonDefaults.buttonColors(containerColor = SyncPendingIndigo),
-                            modifier = Modifier.height(32.dp)
-                        ) {
-                            Text("Sincronizar", fontSize = 12.sp)
-                        }
-                    }
-                }
-            }
-
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
+                    .animateContentSize()
             ) {
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Impacto en tu comunidad",
+                        text = "Impacto en la Comunidad",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
@@ -189,43 +162,21 @@ fun DashboardScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Grid of Metrics
+                    // Hero Metrics Cards
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         StatCard(
-                            title = "Total Reportes",
-                            value = "${state.totalAportaciones}",
+                            title = "Total Incidencias",
+                            value = "${state.totalIncidencias}",
                             icon = Icons.Default.FilterList,
                             accentColor = PrimaryCivicBlue,
                             modifier = Modifier.weight(1f)
                         )
                         StatCard(
-                            title = "Críticos / Reg.",
-                            value = "${state.ticketsCriticos}",
-                            icon = Icons.Default.ReportProblem,
-                            accentColor = StatusRegistradoRed,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        StatCard(
-                            title = "En Evaluación",
-                            value = "${state.ticketsEnEvaluacion}",
-                            icon = Icons.Default.Build,
-                            accentColor = StatusEvaluacionOrange,
-                            modifier = Modifier.weight(1f)
-                        )
-                        StatCard(
-                            title = "Solucionados",
-                            value = "${state.ticketsSolucionados}",
+                            title = "Solucionadas",
+                            value = "${state.solucionadasCount}",
                             icon = Icons.Default.CheckCircle,
                             accentColor = StatusSolucionadoGreen,
                             modifier = Modifier.weight(1f)
@@ -234,11 +185,11 @@ fun DashboardScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Search & Filters
+                    // Search Input
                     OutlinedTextField(
                         value = state.searchQuery,
                         onValueChange = { viewModel.onSearchQueryChanged(it) },
-                        placeholder = { Text("Buscar incidencia...") },
+                        placeholder = { Text("Buscar por descripción...") },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp)
@@ -272,7 +223,7 @@ fun DashboardScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Historial de Reportes (${filteredTickets.size})",
+                        text = "Feed de Reportes (${filteredTickets.size})",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
@@ -294,48 +245,42 @@ fun DashboardScreen(
                     }
                 } else if (filteredTickets.isEmpty()) {
                     item {
-                        Card(
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 20.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(32.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                        AnimatedVisibility(visible = true, enter = fadeIn(), exit = fadeOut()) {
+                            Card(
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(60.dp)
-                                        .clip(CircleShape)
-                                        .background(PrimaryCivicBlue.copy(alpha = 0.1f)),
-                                    contentAlignment = Alignment.Center
+                                Column(
+                                    modifier = Modifier.padding(32.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.ReportProblem,
-                                        contentDescription = null,
-                                        tint = PrimaryCivicBlue,
-                                        modifier = Modifier.size(32.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = "No se encontraron reportes",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
-                                )
-                                Text(
-                                    text = "¡Sé el primero en generar una alerta en tu comunidad!",
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Button(
-                                    onClick = onNavigateToCreate,
-                                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryCivicBlue)
-                                ) {
-                                    Text("Reportar Incidencia")
+                                    Box(
+                                        modifier = Modifier
+                                            .size(60.dp)
+                                            .clip(CircleShape)
+                                            .background(PrimaryCivicBlue.copy(alpha = 0.1f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ReportProblem,
+                                            contentDescription = null,
+                                            tint = PrimaryCivicBlue,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text("No se encontraron incidencias", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    Text("¡Sé el primero en reportar una alerta en tu zona!", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Button(
+                                        onClick = onNavigateToCreate,
+                                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryCivicBlue)
+                                    ) {
+                                        Text("Crear Reporte")
+                                    }
                                 }
                             }
                         }
