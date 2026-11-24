@@ -6,6 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.example.ciudadalerta.data.SessionManager
 import com.example.ciudadalerta.data.TicketEntity
 import com.example.ciudadalerta.data.TicketRepository
+import com.example.ciudadalerta.domain.model.MaintenanceCrews
+import com.example.ciudadalerta.domain.model.TicketStatus
+import com.example.ciudadalerta.domain.model.UserRole
+import com.example.ciudadalerta.domain.usecase.AdvanceTicketStatusUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,9 +18,12 @@ import kotlinx.coroutines.launch
 
 data class DetalleUiState(
     val ticket: TicketEntity? = null,
-    val isEncargadoLoggedIn: Boolean = false,
+    val selectedCrew: String = MaintenanceCrews.availableCrews.first(),
+    val currentRole: UserRole = UserRole.CIUDADANO,
+    val encargadoEmail: String? = null,
     val isLoading: Boolean = true,
     val isUpdatingStatus: Boolean = false,
+    val actionFeedback: String? = null,
     val errorMessage: String? = null
 )
 
@@ -25,6 +32,8 @@ class DetalleViewModel(
     private val sessionManager: SessionManager,
     private val ticketId: Int
 ) : ViewModel() {
+
+    private val advanceStatusUseCase = AdvanceTicketStatusUseCase(repository)
 
     private val _uiState = MutableStateFlow(DetalleUiState())
     val uiState: StateFlow<DetalleUiState> = _uiState.asStateFlow()
@@ -38,8 +47,12 @@ class DetalleViewModel(
         viewModelScope.launch {
             repository.getTicketById(ticketId).collect { ticket ->
                 _uiState.update { current ->
+                    val crew = ticket?.cuadrillaAsignada
+                        ?: ticket?.let { MaintenanceCrews.defaultForCategory(it.categoriaId) }
+                        ?: current.selectedCrew
                     current.copy(
                         ticket = ticket,
+                        selectedCrew = crew,
                         isLoading = false
                     )
                 }
@@ -49,28 +62,95 @@ class DetalleViewModel(
 
     private fun observeSession() {
         viewModelScope.launch {
-            sessionManager.isEncargadoLoggedIn.collect { isLoggedIn ->
-                _uiState.update { it.copy(isEncargadoLoggedIn = isLoggedIn) }
+            sessionManager.currentRole.collect { role ->
+                _uiState.update { it.copy(currentRole = role) }
+            }
+        }
+        viewModelScope.launch {
+            sessionManager.encargadoEmail.collect { email ->
+                _uiState.update { it.copy(encargadoEmail = email) }
             }
         }
     }
 
+    fun onCrewSelected(crew: String) {
+        _uiState.update { it.copy(selectedCrew = crew) }
+    }
+
+    fun clearFeedback() {
+        _uiState.update { it.copy(actionFeedback = null, errorMessage = null) }
+    }
+
+    fun markAsEnEvaluacion() {
+        updatePhase(
+            nextStatus = TicketStatus.EN_EVALUACION,
+            feedbackBuilder = { id, crew -> "Ticket #$id en Evaluación ($crew)." }
+        )
+    }
+
+    fun markAsEnReparacion() {
+        updatePhase(
+            nextStatus = TicketStatus.EN_REPARACION,
+            feedbackBuilder = { id, crew -> "Ticket #$id en Reparación ($crew)." }
+        )
+    }
+
     fun markAsSolucionado() {
+        val encargadoEmail = sessionManager.encargadoEmail.value ?: _uiState.value.currentRole.defaultEmail
+        updatePhase(
+            nextStatus = TicketStatus.SOLUCIONADO,
+            solucionadoPor = encargadoEmail,
+            feedbackBuilder = { id, _ -> "Ticket #$id marcado como Solucionado." }
+        )
+    }
+
+    private fun updatePhase(
+        nextStatus: TicketStatus,
+        solucionadoPor: String? = null,
+        feedbackBuilder: (Int, String) -> String
+    ) {
         val currentTicket = _uiState.value.ticket ?: return
-        val encargadoEmail = sessionManager.encargadoEmail.value
-        
+        val crew = _uiState.value.selectedCrew
         viewModelScope.launch {
-            _uiState.update { it.copy(isUpdatingStatus = true) }
+            _uiState.update { it.copy(isUpdatingStatus = true, actionFeedback = null, errorMessage = null) }
             try {
-                repository.updateTicketStatus(currentTicket, 3, solucionadoPor = encargadoEmail) // 3: Solucionado
-                _uiState.update { it.copy(isUpdatingStatus = false) }
+                advanceStatusUseCase(
+                    ticket = currentTicket,
+                    nextStatus = nextStatus,
+                    cuadrillaAsignada = crew,
+                    solucionadoPor = solucionadoPor
+                )
+                _uiState.update {
+                    it.copy(
+                        isUpdatingStatus = false,
+                        actionFeedback = feedbackBuilder(currentTicket.id, crew)
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         isUpdatingStatus = false,
-                        errorMessage = "Error al actualizar estado: ${e.localizedMessage}"
+                        errorMessage = "Error al actualizar: ${e.localizedMessage}"
                     )
                 }
+            }
+        }
+    }
+
+    fun syncWithCloud() {
+        val currentTicket = _uiState.value.ticket ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUpdatingStatus = true, actionFeedback = null) }
+            val ok = repository.syncSingleTicket(currentTicket)
+            _uiState.update {
+                it.copy(
+                    isUpdatingStatus = false,
+                    actionFeedback = if (ok) {
+                        "Ticket #${currentTicket.id} sincronizado."
+                    } else {
+                        "Guardado localmente en modo Offline."
+                    }
+                )
             }
         }
     }
@@ -87,7 +167,7 @@ class DetalleViewModel(
                 _uiState.update {
                     it.copy(
                         isUpdatingStatus = false,
-                        errorMessage = "Error al eliminar reporte: ${e.localizedMessage}"
+                        errorMessage = "Error al eliminar: ${e.localizedMessage}"
                     )
                 }
             }

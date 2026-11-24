@@ -10,39 +10,53 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
     primary = PrimaryLightBlue,
+    onPrimary = Color(0xFF0D1226),
+    primaryContainer = PrimaryCivicDarkBlue,
+    onPrimaryContainer = PrimaryCivicContainer,
     secondary = SecondaryAmber,
+    onSecondary = Color.White,
     tertiary = TertiaryTeal,
+    onTertiary = Color.White,
     background = DarkBackground,
-    surface = DarkSurface,
-    surfaceVariant = DarkSurfaceVariant,
     onBackground = DarkOnSurface,
+    surface = DarkSurface,
     onSurface = DarkOnSurface,
-    onSurfaceVariant = DarkOnSurfaceVariant
+    surfaceVariant = DarkSurfaceVariant,
+    onSurfaceVariant = DarkOnSurfaceVariant,
+    outline = DarkOutline,
+    outlineVariant = Color(0xFF242F4F)
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = PrimaryCivicBlue,
+    onPrimary = Color.White,
+    primaryContainer = PrimaryCivicContainer,
+    onPrimaryContainer = PrimaryCivicDarkBlue,
     secondary = SecondaryAmber,
+    onSecondary = Color.White,
     tertiary = TertiaryTeal,
+    onTertiary = Color.White,
     background = LightBackground,
-    surface = LightSurface,
-    surfaceVariant = LightSurfaceVariant,
     onBackground = LightOnSurface,
+    surface = LightSurface,
     onSurface = LightOnSurface,
-    onSurfaceVariant = LightOnSurfaceVariant
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = LightOnSurfaceVariant,
+    outline = LightOutline,
+    outlineVariant = Color(0xFFEDF1F7)
 )
 
 @Composable
 fun CiudadAlertaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false, // Set false to preserve Ciudad Alerta brand identity
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -57,9 +71,8 @@ fun CiudadAlertaTheme(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            val window = (view.context as? Activity)?.window ?: return@SideEffect
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 

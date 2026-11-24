@@ -1,8 +1,147 @@
 <resources>
     <string name="app_name">Ciudad Alerta</string>
-    <string name="nav_home">Mis Reportes</string>
-    <string name="nav_create">Nuevo Reporte</string>
-    <string name="btn_save">Guardar</string>
-    <string name="lbl_description">Descripción del problema</string>
+    <string name="nav_home">Inicio</string>
+    <string name="nav_map">Mapa</string>
+    <string name="nav_stats">Resumen</string>
+    <string name="nav_profile">Cuenta</string>
+    <string name="nav_create">Reportar</string>
+
+    <!-- Roles -->
+    <string name="role_citizen">Ciudadano</string>
+    <string name="role_citizen_sub">Reporta fallas y sigue su progreso</string>
+    <string name="role_technician">Técnico / Cuadrilla</string>
+    <string name="role_technician_sub">Atiende reparaciones y cierra tickets</string>
+    <string name="role_manager">Gestor Municipal</string>
+    <string name="role_manager_sub">Asigna cuadrillas y administra reportes</string>
+
+    <!-- Login / Registro -->
+    <string name="auth_welcome_sub">Gestión inteligente de reportes ciudadanos</string>
+    <string name="auth_tab_login">Iniciar sesión</string>
+    <string name="auth_tab_register">Registrarse</string>
+    <string name="auth_select_role">Selecciona tu rol</string>
+    <string name="auth_name_label">Nombre completo (opcional)</string>
+    <string name="auth_email_label">Correo electrónico (opcional)</string>
+    <string name="auth_password_label">Contraseña (opcional)</string>
+    <string name="auth_btn_enter">Entrar</string>
+    <string name="auth_btn_register">Crear cuenta y entrar</string>
+    <string name="auth_citizen_only_note">El registro en la app es exclusivo para ciudadanos</string>
+    <string name="auth_no_validation_hint">Acceso libre de prueba: no requiere validación</string>
+
+    <!-- Subtítulos y Cabecera -->
+    <string name="subtitle_public">Plataforma Ciudadana</string>
+    <string name="subtitle_admin">Gestión Municipal</string>
+    <string name="action_back">Volver</string>
+    <string name="action_dark_mode">Alternar tema</string>
+    <string name="action_sync_now">Sincronizar</string>
+    <string name="action_logout">Cambiar cuenta</string>
+    <string name="action_search">Buscar</string>
+
+    <!-- Categorías -->
+    <string name="cat_all">Todos</string>
+    <string name="cat_pothole">Bache</string>
+    <string name="cat_pothole_full">Bache / Vialidad</string>
+    <string name="cat_lighting">Alumbrado</string>
+    <string name="cat_lighting_full">Alumbrado Público</string>
+    <string name="cat_water">Agua</string>
+    <string name="cat_water_full">Fuga de Agua Potable</string>
+    <string name="cat_security">Seguridad</string>
+    <string name="cat_security_full">Seguridad Ciudadana</string>
+    <string name="cat_trash">Basura</string>
+    <string name="cat_trash_full">Acumulación de Basura</string>
+    <string name="cat_general">General</string>
+
+    <!-- Estatus (4 Fases) -->
+    <string name="status_all">Todos</string>
+    <string name="status_registered">Registrado</string>
+    <string name="status_evaluation">Evaluación</string>
+    <string name="status_in_progress">Reparación</string>
+    <string name="status_solved">Solucionado</string>
+
+    <!-- Badges -->
+    <string name="badge_urgent">Urgente</string>
+    <string name="badge_synced">En nube</string>
+    <string name="badge_offline">Offline</string>
+    <string name="badge_evidence">Foto</string>
+    <string name="badge_evidence_verified">Evidencia verificada</string>
+
+    <!-- Home / Feed -->
+    <string name="label_reports_unit">reportes</string>
+    <string name="dashboard_impact_title">Incidencias Resueltas</string>
+    <string name="dashboard_resolution_rate">Resolución</string>
+    <string name="metric_total">Total</string>
+    <string name="metric_urgent">Urgentes</string>
+    <string name="metric_in_process">En proceso</string>
+    <string name="metric_solved">Resueltos</string>
+    <string name="search_placeholder">Buscar reporte…</string>
+    <string name="feed_section_title">Reportes recientes</string>
+    <string name="feed_see_all">Ver todos</string>
+    <string name="tab_all_reports">Todos</string>
+    <string name="tab_urgent_reports">Urgentes</string>
+    <string name="empty_feed_title">Sin incidencias</string>
+    <string name="empty_feed_subtitle">Toca el botón + para registrar un nuevo reporte.</string>
+    <string name="btn_create_report">Crear Reporte</string>
+    <string name="sync_banner_pending">%1$d pendiente(s) por sincronizar</string>
+    <string name="btn_sync">Sincronizar</string>
+    <string name="select_ticket_tablet">Selecciona un reporte para ver su detalle.</string>
+
+    <!-- Reportar -->
+    <string name="report_title">Nuevo Reporte</string>
+    <string name="report_step_category">Categoría</string>
+    <string name="report_step_description">Descripción</string>
+    <string name="lbl_description">Describe la ubicación y el problema…</string>
+    <string name="report_step_evidence">Evidencia fotográfica</string>
+    <string name="btn_take_photo">Cámara</string>
+    <string name="btn_pick_gallery">Galería</string>
+    <string name="btn_remove_photo">Quitar</string>
+    <string name="photo_placeholder_hint">Opcional: toma una foto o elige de tu galería</string>
+    <string name="photo_captured_ok">Foto guardada localmente</string>
+    <string name="report_step_location">Ubicación GPS</string>
+    <string name="btn_refresh_gps">Actualizar GPS</string>
+    <string name="gps_source_real">GPS del dispositivo</string>
+    <string name="gps_source_preset">Ubicación de referencia</string>
     <string name="chk_urgent">Marcar como urgente</string>
+    <string name="chk_urgent_sub">Destaca este reporte para atención prioritaria</string>
+    <string name="btn_save">Enviar Reporte</string>
+
+    <!-- Detalle -->
+    <string name="detail_title_fallback">Detalle</string>
+    <string name="detail_not_found">El reporte no existe o fue eliminado.</string>
+    <string name="detail_timeline_title">Seguimiento</string>
+    <string name="detail_info_title">Detalles</string>
+    <string name="detail_registered_at">Registrado</string>
+    <string name="detail_updated_at">Actualizado</string>
+    <string name="detail_gps_coords">Coordenadas</string>
+    <string name="detail_assigned_crew">Cuadrilla</string>
+    <string name="detail_solved_by">Resuelto por</string>
+    <string name="detail_open_maps">Abrir en Google Maps</string>
+    <string name="admin_panel_title">Gestión Municipal</string>
+    <string name="tech_panel_title">Panel de Reparación</string>
+    <string name="admin_panel_subtitle">Actualiza la fase de atención o asigna cuadrilla.</string>
+    <string name="admin_select_crew">Cuadrilla asignada</string>
+    <string name="admin_btn_evaluate">Evaluación Técnica</string>
+    <string name="admin_btn_repair">En Reparación</string>
+    <string name="admin_btn_solve">Marcar Solucionado</string>
+    <string name="admin_btn_delete">Eliminar Reporte</string>
+    <string name="dialog_delete_title">¿Eliminar reporte?</string>
+    <string name="dialog_delete_body">Se eliminará de la lista local y se sincronizará la baja.</string>
+    <string name="dialog_confirm_delete">Eliminar</string>
+    <string name="dialog_cancel">Cancelar</string>
+
+    <!-- Mapa -->
+    <string name="map_title">Mapa Urbano</string>
+    <string name="map_subtitle">%1$d incidencias geolocalizadas</string>
+    <string name="map_tap_pin_hint">Toca un pin para ver el reporte</string>
+    <string name="map_view_detail">Ver detalle</string>
+
+    <!-- Resumen / Estadísticas -->
+    <string name="stats_title">Resumen</string>
+    <string name="stats_hero_title">Avance Comunitario</string>
+    <string name="stats_lifecycle_title">Por fase</string>
+    <string name="stats_category_title">Por categoría</string>
+    <string name="stats_infra_title">Sincronización y evidencias</string>
+    <string name="stats_synced_label">Sincronizados</string>
+    <string name="stats_offline_label">Offline</string>
+    <string name="stats_photos_label">Con foto</string>
+    <string name="stats_ranking_title">Responsables</string>
+    <string name="stats_no_solved_yet">Sin cierres registrados todavía.</string>
 </resources>

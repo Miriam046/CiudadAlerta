@@ -1,6 +1,13 @@
 package com.example.ciudadalerta.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,334 +19,508 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ciudadalerta.ui.components.getCategoryInfo
+import androidx.core.content.ContextCompat
+import com.example.ciudadalerta.R
+import com.example.ciudadalerta.data.EvidenceMediaHelper
+import com.example.ciudadalerta.data.LocationHelper
+import com.example.ciudadalerta.domain.model.TicketCategory
+import com.example.ciudadalerta.ui.components.BackHeaderButton
+import com.example.ciudadalerta.ui.components.CategorySquircleIcon
+import com.example.ciudadalerta.ui.components.MiniGpsMapCanvas
+import com.example.ciudadalerta.ui.components.MinimalHeader
+import com.example.ciudadalerta.ui.components.PhotoEvidenceCard
+import com.example.ciudadalerta.ui.components.getCategoryVisual
 import com.example.ciudadalerta.ui.theme.PrimaryCivicBlue
 import com.example.ciudadalerta.ui.theme.StatusRegistradoRed
+import com.example.ciudadalerta.ui.theme.UrgentRoseRed
 import com.example.ciudadalerta.ui.viewmodels.ReportarViewModel
+import kotlinx.coroutines.launch
+import java.io.File
+import java.util.Locale
 import kotlin.random.Random
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportarScreen(
     viewModel: ReportarViewModel,
     onBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Nuevo Reporte Ciudadano",
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Volver",
-                            tint = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = PrimaryCivicBlue
-                )
-            )
+    var pendingCameraFile by remember { mutableStateOf<File?>(null) }
+
+    val takePictureLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        val captured = pendingCameraFile
+        if (success && captured != null && captured.exists()) {
+            viewModel.onFotoSelected(captured.absolutePath)
         }
-    ) { padding ->
+        pendingCameraFile = null
+    }
+
+    val launchCamera: () -> Unit = {
+        val (file, uri) = EvidenceMediaHelper.createCameraCaptureFile(context)
+        pendingCameraFile = file
+        takePictureLauncher.launch(uri)
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) launchCamera()
+    }
+
+    val pickMediaLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val savedPath = EvidenceMediaHelper.copyUriToInternalStorage(context, uri)
+                if (savedPath != null) {
+                    viewModel.onFotoSelected(savedPath)
+                }
+            }
+        }
+    }
+
+    val refreshLocation: () -> Unit = {
+        val hardware = LocationHelper.getLastKnownHardwareLocation(context)
+        if (hardware != null) {
+            viewModel.onLocationChanged(hardware.latitude, hardware.longitude, fromHardware = true)
+        } else {
+            val lat = 19.4326 + (Random.nextDouble() - 0.5) * 0.03
+            val lon = -99.1332 + (Random.nextDouble() - 0.5) * 0.03
+            viewModel.onLocationChanged(lat, lon, fromHardware = false)
+        }
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        refreshLocation()
+    }
+
+    LaunchedEffect(Unit) {
+        if (LocationHelper.hasLocationPermission(context)) {
+            LocationHelper.getLastKnownHardwareLocation(context)?.let { reading ->
+                viewModel.onLocationChanged(reading.latitude, reading.longitude, fromHardware = true)
+            }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
+    ) {
+        MinimalHeader(
+            title = stringResource(R.string.report_title),
+            leadingAction = { BackHeaderButton(onBack) }
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(scrollState)
-                .padding(16.dp)
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            // Error alert if present
             if (state.errorMessage != null) {
                 Surface(
-                    color = StatusRegistradoRed.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(12.dp),
+                    color = StatusRegistradoRed.copy(alpha = 0.10f),
+                    shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier.padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = StatusRegistradoRed
-                        )
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = StatusRegistradoRed)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = state.errorMessage!!,
                             color = StatusRegistradoRed,
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Category Selection Header
-            Text(
-                text = "1. Selecciona la Categoría",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-
-            val categories = listOf(
-                1 to "Bache / Calle",
-                2 to "Alumbrado Público",
-                3 to "Fuga de Agua",
-                4 to "Seguridad Ciudadana",
-                5 to "Acumulación de Basura"
-            )
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                categories.forEach { (catId, catName) ->
-                    val isSelected = state.categoriaId == catId
-                    val (label, icon, color) = getCategoryInfo(catId)
-
-                    Card(
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isSelected) color.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface
-                        ),
-                        border = if (isSelected) androidx.compose.foundation.BorderStroke(2.dp, color) else null,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { viewModel.onCategoriaSelected(catId) }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+            // 1. Clean Pastel Squircle Category Row
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = stringResource(R.string.report_step_category),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    items(TicketCategory.entries) { cat ->
+                        val visual = getCategoryVisual(cat.id)
+                        val isSelected = state.categoriaId == cat.id
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .width(64.dp)
+                                .clickable { viewModel.onCategoriaSelected(cat.id) }
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(color.copy(alpha = 0.2f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = icon,
-                                        contentDescription = null,
-                                        tint = color,
-                                        modifier = Modifier.size(20.dp)
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(58.dp)
+                                    .clip(RoundedCornerShape(18.dp))
+                                    .then(
+                                        if (isSelected) {
+                                            Modifier.border(2.5.dp, visual.color, RoundedCornerShape(18.dp))
+                                        } else {
+                                            Modifier
+                                        }
                                     )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = catName,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) color else MaterialTheme.colorScheme.onSurface
+                                    .padding(if (isSelected) 3.dp else 0.dp)
+                            ) {
+                                CategorySquircleIcon(
+                                    icon = visual.icon,
+                                    color = visual.color,
+                                    size = 52.dp,
+                                    iconSize = 24.dp,
+                                    cornerRadius = 15.dp
                                 )
                             }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = stringResource(cat.shortLabelRes),
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
 
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = color,
-                                    modifier = Modifier.size(20.dp)
-                                )
+            // 2. Description
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = stringResource(R.string.report_step_description),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                OutlinedTextField(
+                    value = state.descripcion,
+                    onValueChange = { viewModel.onDescripcionChanged(it) },
+                    placeholder = { Text(stringResource(R.string.lbl_description)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    maxLines = 5,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedBorderColor = PrimaryCivicBlue,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                    )
+                )
+            }
+
+            // 3. Photographic Evidence
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.report_step_evidence),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (state.fotoRuta != null) {
+                        TextButton(onClick = { viewModel.onFotoSelected(null) }) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteOutline,
+                                contentDescription = null,
+                                tint = StatusRegistradoRed,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(stringResource(R.string.btn_remove_photo), color = StatusRegistradoRed)
+                        }
+                    }
+                }
+
+                if (state.fotoRuta != null) {
+                    PhotoEvidenceCard(fotoRuta = state.fotoRuta!!, categoriaId = state.categoriaId)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = PrimaryCivicBlue,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.photo_captured_ok),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = PrimaryCivicBlue
+                        )
+                    }
+                } else {
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.photo_placeholder_hint),
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                FilledTonalButton(
+                                    onClick = {
+                                        val granted = ContextCompat.checkSelfPermission(
+                                            context,
+                                            Manifest.permission.CAMERA
+                                        ) == PackageManager.PERMISSION_GRANTED
+                                        if (granted) launchCamera() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                    },
+                                    shape = RoundedCornerShape(14.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(17.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(stringResource(R.string.btn_take_photo), fontWeight = FontWeight.SemiBold)
+                                }
+
+                                OutlinedButton(
+                                    onClick = {
+                                        pickMediaLauncher.launch(
+                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                        )
+                                    },
+                                    shape = RoundedCornerShape(14.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(17.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(stringResource(R.string.btn_pick_gallery), fontWeight = FontWeight.SemiBold)
+                                }
                             }
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            // 4. Location
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = stringResource(R.string.report_step_location),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                MiniGpsMapCanvas(
+                    latitud = state.latitud,
+                    longitud = state.longitud,
+                    categoriaId = state.categoriaId
+                )
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = PrimaryCivicBlue)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "%.5f, %.5f".format(Locale.US, state.latitud, state.longitud),
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 13.sp
+                                )
+                                Text(
+                                    text = stringResource(
+                                        if (state.isRealGps) R.string.gps_source_real else R.string.gps_source_preset
+                                    ),
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        FilledTonalButton(
+                            onClick = {
+                                if (LocationHelper.hasLocationPermission(context)) {
+                                    refreshLocation()
+                                } else {
+                                    locationPermissionLauncher.launch(
+                                        arrayOf(
+                                            Manifest.permission.ACCESS_FINE_LOCATION,
+                                            Manifest.permission.ACCESS_COARSE_LOCATION
+                                        )
+                                    )
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.MyLocation, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("GPS", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
 
-            // Problem Description Header
-            Text(
-                text = "2. Descripción del Problema",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = state.descripcion,
-                onValueChange = { viewModel.onDescripcionChanged(it) },
-                placeholder = { Text("Describe brevemente la ubicación exacta y detalles de la incidencia...") },
+            // 5. Urgency Toggle
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(
+                    width = if (state.isUrgent) 1.5.dp else 1.dp,
+                    color = if (state.isUrgent) UrgentRoseRed else MaterialTheme.colorScheme.outlineVariant
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(130.dp),
-                shape = RoundedCornerShape(14.dp),
-                maxLines = 5
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Location Section
-            Text(
-                text = "3. Ubicación Geográfica (GPS)",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Card(
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
+                    .clickable { viewModel.onUrgentToggled(!state.isUrgent) }
             ) {
                 Row(
-                    modifier = Modifier.padding(14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = PrimaryCivicBlue
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        CategorySquircleIcon(
+                            icon = Icons.Default.PriorityHigh,
+                            color = UrgentRoseRed,
+                            size = 38.dp,
+                            iconSize = 19.dp,
+                            cornerRadius = 11.dp
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Latitud: %.4f, Longitud: %.4f".format(state.latitud, state.longitud),
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 13.sp
+                                text = stringResource(R.string.chk_urgent),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
                             )
                             Text(
-                                text = "Ubicación fijada automáticamente",
+                                text = stringResource(R.string.chk_urgent_sub),
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
-
-                    IconButton(
-                        onClick = {
-                            val randomLat = 19.4326 + (Random.nextDouble() - 0.5) * 0.05
-                            val randomLon = -99.1332 + (Random.nextDouble() - 0.5) * 0.05
-                            viewModel.onLocationChanged(randomLat, randomLon)
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MyLocation,
-                            contentDescription = "Refrescar GPS",
-                            tint = PrimaryCivicBlue
+                    Switch(
+                        checked = state.isUrgent,
+                        onCheckedChange = { viewModel.onUrgentToggled(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = UrgentRoseRed
                         )
-                    }
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Urgency Checkbox Card
-            Card(
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
+            Button(
+                onClick = { viewModel.submitReport(onSuccess = onBack) },
+                enabled = !state.isSaving,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryCivicBlue)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = state.isUrgent,
-                        onCheckedChange = { viewModel.onUrgentToggled(it) }
+                if (state.isSaving) {
+                    CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp)
+                } else {
+                    Text(
+                        text = stringResource(R.string.btn_save),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = Color.White
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Column {
-                        Text(
-                            text = "Marcar como Atención Urgente / Crítica",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = if (state.isUrgent) StatusRegistradoRed else MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Priorizará el ticket en el tablero ciudadano",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-
-            // Submit Button
-            Button(
-                onClick = {
-                    viewModel.submitReport(onSuccess = onBack)
-                },
-                enabled = !state.isSaving,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryCivicBlue)
-            ) {
-                if (state.isSaving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text(
-                        text = "Guardar y Enviar Reporte",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(30.dp))
         }
     }
 }

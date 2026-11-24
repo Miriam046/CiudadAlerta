@@ -1,8 +1,147 @@
 <resources>
     <string name="app_name">City Alert</string>
-    <string name="nav_home">My Reports</string>
-    <string name="nav_create">New Report</string>
-    <string name="btn_save">Save</string>
-    <string name="lbl_description">Problem description</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_map">Map</string>
+    <string name="nav_stats">Overview</string>
+    <string name="nav_profile">Account</string>
+    <string name="nav_create">Report</string>
+
+    <!-- Roles -->
+    <string name="role_citizen">Citizen</string>
+    <string name="role_citizen_sub">Report issues and track progress</string>
+    <string name="role_technician">Repair Crew</string>
+    <string name="role_technician_sub">Handle repairs and close tickets</string>
+    <string name="role_manager">Municipal Manager</string>
+    <string name="role_manager_sub">Assign crews and manage reports</string>
+
+    <!-- Login / Register -->
+    <string name="auth_welcome_sub">Smart civic issue reporting</string>
+    <string name="auth_tab_login">Sign in</string>
+    <string name="auth_tab_register">Sign up</string>
+    <string name="auth_select_role">Select your role</string>
+    <string name="auth_name_label">Full name (optional)</string>
+    <string name="auth_email_label">Email address (optional)</string>
+    <string name="auth_password_label">Password (optional)</string>
+    <string name="auth_btn_enter">Continue</string>
+    <string name="auth_btn_register">Create account &amp; continue</string>
+    <string name="auth_citizen_only_note">In-app sign-up is exclusively for citizens</string>
+    <string name="auth_no_validation_hint">Demo mode: no account validation required</string>
+
+    <!-- Subtitles & Header -->
+    <string name="subtitle_public">Civic Platform</string>
+    <string name="subtitle_admin">Municipal Desk</string>
+    <string name="action_back">Back</string>
+    <string name="action_dark_mode">Toggle theme</string>
+    <string name="action_sync_now">Sync</string>
+    <string name="action_logout">Switch account</string>
+    <string name="action_search">Search</string>
+
+    <!-- Categories -->
+    <string name="cat_all">All</string>
+    <string name="cat_pothole">Pothole</string>
+    <string name="cat_pothole_full">Pothole / Road</string>
+    <string name="cat_lighting">Lighting</string>
+    <string name="cat_lighting_full">Street Lighting</string>
+    <string name="cat_water">Water</string>
+    <string name="cat_water_full">Water Leak</string>
+    <string name="cat_security">Safety</string>
+    <string name="cat_security_full">Public Safety</string>
+    <string name="cat_trash">Waste</string>
+    <string name="cat_trash_full">Waste Pileup</string>
+    <string name="cat_general">General</string>
+
+    <!-- Statuses -->
+    <string name="status_all">All</string>
+    <string name="status_registered">Registered</string>
+    <string name="status_evaluation">Evaluating</string>
+    <string name="status_in_progress">Repairing</string>
+    <string name="status_solved">Resolved</string>
+
+    <!-- Badges -->
+    <string name="badge_urgent">Urgent</string>
+    <string name="badge_synced">Synced</string>
+    <string name="badge_offline">Offline</string>
+    <string name="badge_evidence">Photo</string>
+    <string name="badge_evidence_verified">Verified photo</string>
+
+    <!-- Home / Feed -->
+    <string name="label_reports_unit">reports</string>
+    <string name="dashboard_impact_title">Resolved Reports</string>
+    <string name="dashboard_resolution_rate">Resolution</string>
+    <string name="metric_total">Total</string>
+    <string name="metric_urgent">Urgent</string>
+    <string name="metric_in_process">Active</string>
+    <string name="metric_solved">Resolved</string>
+    <string name="search_placeholder">Search reports…</string>
+    <string name="feed_section_title">Recent reports</string>
+    <string name="feed_see_all">See all</string>
+    <string name="tab_all_reports">All</string>
+    <string name="tab_urgent_reports">Urgent</string>
+    <string name="empty_feed_title">No reports found</string>
+    <string name="empty_feed_subtitle">Tap the + button to submit a new report.</string>
+    <string name="btn_create_report">Create Report</string>
+    <string name="sync_banner_pending">%1$d pending cloud sync</string>
+    <string name="btn_sync">Sync</string>
+    <string name="select_ticket_tablet">Select a report to view details.</string>
+
+    <!-- Report Form -->
+    <string name="report_title">New Report</string>
+    <string name="report_step_category">Category</string>
+    <string name="report_step_description">Description</string>
+    <string name="lbl_description">Describe the exact location and issue…</string>
+    <string name="report_step_evidence">Photo evidence</string>
+    <string name="btn_take_photo">Camera</string>
+    <string name="btn_pick_gallery">Gallery</string>
+    <string name="btn_remove_photo">Remove</string>
+    <string name="photo_placeholder_hint">Optional: take a photo or pick from gallery</string>
+    <string name="photo_captured_ok">Photo saved locally</string>
+    <string name="report_step_location">GPS Location</string>
+    <string name="btn_refresh_gps">Update GPS</string>
+    <string name="gps_source_real">Device GPS</string>
+    <string name="gps_source_preset">Reference coordinates</string>
     <string name="chk_urgent">Mark as urgent</string>
+    <string name="chk_urgent_sub">Highlights this report for priority response</string>
+    <string name="btn_save">Submit Report</string>
+
+    <!-- Detail -->
+    <string name="detail_title_fallback">Detail</string>
+    <string name="detail_not_found">Report not found or deleted.</string>
+    <string name="detail_timeline_title">Progress</string>
+    <string name="detail_info_title">Details</string>
+    <string name="detail_registered_at">Registered</string>
+    <string name="detail_updated_at">Updated</string>
+    <string name="detail_gps_coords">Coordinates</string>
+    <string name="detail_assigned_crew">Crew</string>
+    <string name="detail_solved_by">Resolved by</string>
+    <string name="detail_open_maps">Open in Google Maps</string>
+    <string name="admin_panel_title">Municipal Controls</string>
+    <string name="tech_panel_title">Repair Controls</string>
+    <string name="admin_panel_subtitle">Update repair stage or assign a crew.</string>
+    <string name="admin_select_crew">Assigned crew</string>
+    <string name="admin_btn_evaluate">Technical Evaluation</string>
+    <string name="admin_btn_repair">In Repair</string>
+    <string name="admin_btn_solve">Mark Resolved</string>
+    <string name="admin_btn_delete">Delete Report</string>
+    <string name="dialog_delete_title">Delete report?</string>
+    <string name="dialog_delete_body">This removes it locally and queues cloud deletion.</string>
+    <string name="dialog_confirm_delete">Delete</string>
+    <string name="dialog_cancel">Cancel</string>
+
+    <!-- Map -->
+    <string name="map_title">Urban Map</string>
+    <string name="map_subtitle">%1$d geolocated reports</string>
+    <string name="map_tap_pin_hint">Tap any pin to preview the report</string>
+    <string name="map_view_detail">View details</string>
+
+    <!-- Overview -->
+    <string name="stats_title">Overview</string>
+    <string name="stats_hero_title">Community Progress</string>
+    <string name="stats_lifecycle_title">By stage</string>
+    <string name="stats_category_title">By category</string>
+    <string name="stats_infra_title">Sync &amp; evidence</string>
+    <string name="stats_synced_label">Synced</string>
+    <string name="stats_offline_label">Offline</string>
+    <string name="stats_photos_label">With photo</string>
+    <string name="stats_ranking_title">Responders</string>
+    <string name="stats_no_solved_yet">No resolved tickets yet.</string>
 </resources>

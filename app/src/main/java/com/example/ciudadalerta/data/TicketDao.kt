@@ -9,11 +9,17 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TicketDao {
-    @Query("SELECT * FROM ticket_incidencia WHERE isDeleted = 0 ORDER BY fecha DESC")
+    @Query("SELECT * FROM ticket_incidencia WHERE isDeleted = 0 ORDER BY esUrgente DESC, fecha DESC")
     fun getAllActiveTickets(): Flow<List<TicketEntity>>
 
     @Query("SELECT * FROM ticket_incidencia WHERE id = :id AND isDeleted = 0 LIMIT 1")
     fun getTicketById(id: Int): Flow<TicketEntity?>
+
+    @Query("SELECT * FROM ticket_incidencia WHERE remoteId = :remoteId LIMIT 1")
+    suspend fun getTicketByRemoteId(remoteId: Int): TicketEntity?
+
+    @Query("SELECT COUNT(*) FROM ticket_incidencia")
+    suspend fun getTicketCount(): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTicket(ticket: TicketEntity): Long

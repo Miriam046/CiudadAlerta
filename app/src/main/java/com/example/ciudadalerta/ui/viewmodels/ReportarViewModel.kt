@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.ciudadalerta.data.TicketRepository
+import com.example.ciudadalerta.domain.usecase.CreateTicketUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,9 +13,10 @@ import kotlinx.coroutines.launch
 
 data class ReportarUiState(
     val descripcion: String = "",
-    val categoriaId: Int = 1, // 1: Bache, 2: Alumbrado, 3: Agua, 4: Seguridad, 5: Basura
+    val categoriaId: Int = 1,
     val latitud: Double = 19.432608,
     val longitud: Double = -99.133209,
+    val isRealGps: Boolean = false,
     val fotoRuta: String? = null,
     val isUrgent: Boolean = false,
     val isSaving: Boolean = false,
@@ -23,6 +25,8 @@ data class ReportarUiState(
 )
 
 class ReportarViewModel(private val repository: TicketRepository) : ViewModel() {
+
+    private val createTicketUseCase = CreateTicketUseCase(repository)
 
     private val _uiState = MutableStateFlow(ReportarUiState())
     val uiState: StateFlow<ReportarUiState> = _uiState.asStateFlow()
@@ -35,8 +39,8 @@ class ReportarViewModel(private val repository: TicketRepository) : ViewModel() 
         _uiState.update { it.copy(categoriaId = id) }
     }
 
-    fun onLocationChanged(lat: Double, lon: Double) {
-        _uiState.update { it.copy(latitud = lat, longitud = lon) }
+    fun onLocationChanged(lat: Double, lon: Double, fromHardware: Boolean = false) {
+        _uiState.update { it.copy(latitud = lat, longitud = lon, isRealGps = fromHardware) }
     }
 
     fun onUrgentToggled(urgent: Boolean) {
@@ -55,8 +59,7 @@ class ReportarViewModel(private val repository: TicketRepository) : ViewModel() 
         var currentFoto: String? = null
         var currentCat = 1
         var isUrg = false
-        
-        // Actualización atómica del estado para asegurar que solo un clic pase la validación
+
         _uiState.update { current ->
             if (current.isSaving || current.isSuccess) {
                 shouldReturn = true
@@ -64,38 +67,40 @@ class ReportarViewModel(private val repository: TicketRepository) : ViewModel() 
             }
             if (current.descripcion.isBlank()) {
                 shouldReturn = true
-                return@update current.copy(errorMessage = "Por favor ingresa una descripción del problema.")
+                return@update current.copy(errorMessage = "Por favor ingresa una descripción detallada del problema.")
             }
-            
+
             currentDesc = current.descripcion
             currentLat = current.latitud
             currentLon = current.longitud
             currentFoto = current.fotoRuta
             currentCat = current.categoriaId
             isUrg = current.isUrgent
-            
-            current.copy(isSaving = true)
+
+            current.copy(isSaving = true, errorMessage = null)
         }
 
         if (shouldReturn) return
 
         viewModelScope.launch {
             try {
-                // Si es urgente, estatus es 1 (Crítico/Registrado)
-                val estatusId = if (isUrg) 1 else 1
-                repository.addTicket(
-                    descripcion = currentDesc.trim(),
-                    lat = currentLat,
-                    lon = currentLon,
+                createTicketUseCase(
+                    descripcion = currentDesc,
+                    latitud = currentLat,
+                    longitud = currentLon,
                     fotoRuta = currentFoto,
                     categoriaId = currentCat,
-                    estatusId = estatusId
+                    esUrgente = isUrg
                 )
-                // Se mantiene isSuccess = true e isSaving = true para bloquear cualquier toque adicional durante la transición/cierre de la pantalla
                 _uiState.update { it.copy(isSaving = true, isSuccess = true) }
                 onSuccess()
             } catch (e: Exception) {
-                _uiState.update { it.copy(isSaving = false, errorMessage = "Error al guardar el reporte: ${e.localizedMessage}") }
+                _uiState.update {
+                    it.copy(
+                        isSaving = false,
+                        errorMessage = "Error al guardar el reporte: ${e.localizedMessage}"
+                    )
+                }
             }
         }
     }

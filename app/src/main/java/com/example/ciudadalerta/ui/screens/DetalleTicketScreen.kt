@@ -1,370 +1,446 @@
 package com.example.ciudadalerta.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ManageSearch
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Engineering
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Update
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ciudadalerta.R
+import com.example.ciudadalerta.data.LocationHelper
+import com.example.ciudadalerta.domain.model.MaintenanceCrews
+import com.example.ciudadalerta.domain.model.TicketStatus
+import com.example.ciudadalerta.ui.components.BackHeaderButton
 import com.example.ciudadalerta.ui.components.CategoryBadge
+import com.example.ciudadalerta.ui.components.MiniGpsMapCanvas
+import com.example.ciudadalerta.ui.components.MinimalHeader
+import com.example.ciudadalerta.ui.components.PhotoEvidenceCard
+import com.example.ciudadalerta.ui.components.SoftIconButton
 import com.example.ciudadalerta.ui.components.StatusChip
+import com.example.ciudadalerta.ui.components.StatusTimelineCard
 import com.example.ciudadalerta.ui.components.SyncBadge
+import com.example.ciudadalerta.ui.components.UrgentBadge
+import com.example.ciudadalerta.ui.components.formatDateFull
 import com.example.ciudadalerta.ui.theme.PrimaryCivicBlue
+import com.example.ciudadalerta.ui.theme.StatusEvaluacionOrange
 import com.example.ciudadalerta.ui.theme.StatusRegistradoRed
+import com.example.ciudadalerta.ui.theme.StatusReparacionBlue
 import com.example.ciudadalerta.ui.theme.StatusSolucionadoGreen
 import com.example.ciudadalerta.ui.viewmodels.DetalleViewModel
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetalleTicketScreen(
     viewModel: DetalleViewModel,
     onBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state.actionFeedback, state.errorMessage) {
+        val msg = state.actionFeedback ?: state.errorMessage
+        if (msg != null) {
+            snackbarHostState.showSnackbar(msg)
+            viewModel.clearFeedback()
+        }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(stringResource(R.string.dialog_delete_title), fontWeight = FontWeight.Bold) },
+            text = { Text(stringResource(R.string.dialog_delete_body)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteDialog = false
+                        viewModel.deleteReport(onSuccess = onBack)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = StatusRegistradoRed)
+                ) {
+                    Text(stringResource(R.string.dialog_confirm_delete), color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(stringResource(R.string.dialog_cancel))
+                }
+            }
+        )
+    }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = if (state.ticket != null) "Ticket #${state.ticket!!.id}" else "Detalle de Incidencia",
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Volver",
-                            tint = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = PrimaryCivicBlue
-                )
-            )
-        }
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { padding ->
-        if (state.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = PrimaryCivicBlue)
-            }
-        } else if (state.ticket == null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("El ticket no existe o fue eliminado.")
-            }
-        } else {
-            val ticket = state.ticket!!
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .background(MaterialTheme.colorScheme.background)
-                    .verticalScroll(scrollState)
-                    .padding(16.dp)
-            ) {
-                // Header Card with Category & Status
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            CategoryBadge(categoriaId = ticket.categoriaId)
-                            StatusChip(estatusId = ticket.estatusId)
-                        }
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        Text(
-                            text = ticket.descripcion,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .statusBarsPadding()
+        ) {
+            MinimalHeader(
+                title = if (state.ticket != null) "Ticket #${state.ticket!!.id}" else stringResource(R.string.detail_title_fallback),
+                leadingAction = { BackHeaderButton(onBack) },
+                trailingAction = {
+                    if (state.ticket != null) {
+                        SoftIconButton(
+                            icon = Icons.Default.CloudSync,
+                            contentDescription = stringResource(R.string.action_sync_now),
+                            onClick = { viewModel.syncWithCloud() }
                         )
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        SyncBadge(isSynced = ticket.isSynced)
                     }
                 }
+            )
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Information Card
-                Text(
-                    text = "Información de la Alerta",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarToday,
-                                contentDescription = null,
-                                tint = PrimaryCivicBlue,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    text = "Fecha de Registro",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = formatDateFull(ticket.fecha),
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 14.sp
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.LocationOn,
-                                contentDescription = null,
-                                tint = PrimaryCivicBlue,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    text = "Coordenadas GPS",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = "Latitud: ${ticket.latitud}, Longitud: ${ticket.longitud}",
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 14.sp
-                                )
-                            }
-                        }
-
-                        if (ticket.estatusId == 3 && !ticket.solucionadoPor.isNullOrBlank()) {
-                            Spacer(modifier = Modifier.height(14.dp))
-                            
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = StatusSolucionadoGreen,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Text(
-                                        text = "Solucionado por",
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        text = ticket.solucionadoPor,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 14.sp,
-                                        color = StatusSolucionadoGreen
-                                    )
-                                }
-                            }
-                        }
-                    }
+            if (state.isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = PrimaryCivicBlue)
                 }
+            } else if (state.ticket == null) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(stringResource(R.string.detail_not_found))
+                }
+            } else {
+                val ticket = state.ticket!!
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Map Placeholder Preview Card
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp)
+                        .fillMaxSize()
+                        .verticalScroll(scrollState)
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                    // Header Summary Card
+                    Surface(
+                        shape = RoundedCornerShape(22.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Default.Map,
-                                contentDescription = null,
-                                tint = PrimaryCivicBlue,
-                                modifier = Modifier.size(36.dp)
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
+                        Column(modifier = Modifier.padding(18.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CategoryBadge(categoriaId = ticket.categoriaId)
+                                    if (ticket.esUrgente) {
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        UrgentBadge()
+                                    }
+                                }
+                                StatusChip(estatusId = ticket.estatusId)
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
                             Text(
-                                text = "Vista Previa del Mapa",
-                                fontSize = 12.sp,
+                                text = ticket.descripcion,
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = PrimaryCivicBlue
+                                color = MaterialTheme.colorScheme.onSurface
                             )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            SyncBadge(isSynced = ticket.isSynced)
                         }
                     }
-                }
 
-                // CONDITIONAL ENCARGADO ADMIN SECTION
-                if (state.isEncargadoLoggedIn) {
-                    Spacer(modifier = Modifier.height(24.dp))
+                    // 4-Phase Timeline
+                    StatusTimelineCard(estatusId = ticket.estatusId)
 
-                    AnimatedVisibility(visible = true, enter = fadeIn(), exit = fadeOut()) {
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Shield,
-                                    contentDescription = null,
-                                    tint = PrimaryCivicBlue,
-                                    modifier = Modifier.size(20.dp)
+                    // Photo Evidence (local o URL de Supabase Storage)
+                    val photoSource = ticket.bestPhotoSource
+                    if (photoSource != null) {
+                        PhotoEvidenceCard(fotoRuta = photoSource, categoriaId = ticket.categoriaId)
+                    }
+
+                    // Map + Open Maps
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        MiniGpsMapCanvas(
+                            latitud = ticket.latitud,
+                            longitud = ticket.longitud,
+                            categoriaId = ticket.categoriaId
+                        )
+                        FilledTonalButton(
+                            onClick = {
+                                LocationHelper.openInExternalMaps(
+                                    context = context,
+                                    lat = ticket.latitud,
+                                    lon = ticket.longitud,
+                                    label = "Ticket #${ticket.id}"
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(stringResource(R.string.detail_open_maps), fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+
+                    // Details Card
+                    Surface(
+                        shape = RoundedCornerShape(22.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.detail_info_title),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            DetailInfoRow(
+                                icon = Icons.Default.CalendarToday,
+                                label = stringResource(R.string.detail_registered_at),
+                                value = formatDateFull(ticket.fecha)
+                            )
+                            DetailInfoRow(
+                                icon = Icons.Default.Update,
+                                label = stringResource(R.string.detail_updated_at),
+                                value = formatDateFull(ticket.fechaActualizacion)
+                            )
+                            DetailInfoRow(
+                                icon = Icons.Default.LocationOn,
+                                label = stringResource(R.string.detail_gps_coords),
+                                value = "%.5f, %.5f".format(Locale.US, ticket.latitud, ticket.longitud)
+                            )
+                            if (!ticket.cuadrillaAsignada.isNullOrBlank()) {
+                                DetailInfoRow(
+                                    icon = Icons.Default.Groups,
+                                    label = stringResource(R.string.detail_assigned_crew),
+                                    value = ticket.cuadrillaAsignada,
+                                    valueColor = StatusReparacionBlue
+                                )
+                            }
+                            if (ticket.estatusId == TicketStatus.SOLUCIONADO.id && !ticket.solucionadoPor.isNullOrBlank()) {
+                                DetailInfoRow(
+                                    icon = Icons.Default.CheckCircle,
+                                    label = stringResource(R.string.detail_solved_by),
+                                    value = ticket.solucionadoPor,
+                                    valueColor = PrimaryCivicBlue
+                                )
+                            }
+                        }
+                    }
+
+                    // Role-based Operations Panel (Técnico de Reparación & Gestor Municipal)
+                    if (state.currentRole.canUpdateRepairStatus) {
+                        Surface(
+                            shape = RoundedCornerShape(22.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, PrimaryCivicBlue.copy(alpha = 0.28f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(18.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
                                 Text(
-                                    text = "Panel de Administración (Encargado)",
-                                    style = MaterialTheme.typography.titleMedium,
+                                    text = stringResource(
+                                        if (state.currentRole.canManageAndDelete) {
+                                            R.string.admin_panel_title
+                                        } else {
+                                            R.string.tech_panel_title
+                                        }
+                                    ),
+                                    style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = PrimaryCivicBlue
                                 )
-                            }
+                                Text(
+                                    text = stringResource(R.string.admin_panel_subtitle),
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
 
-                            Spacer(modifier = Modifier.height(10.dp))
+                                // Crew selector (Manager or Technician)
+                                Text(
+                                    text = stringResource(R.string.admin_select_crew),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    items(MaintenanceCrews.availableCrews) { crew ->
+                                        FilterChip(
+                                            selected = state.selectedCrew == crew,
+                                            onClick = { viewModel.onCrewSelected(crew) },
+                                            label = { Text(crew, fontSize = 11.sp) }
+                                        )
+                                    }
+                                }
 
-                            Card(
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(
-                                        text = "Acciones autorizadas para este ticket:",
-                                        fontSize = 13.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-
-                                    Spacer(modifier = Modifier.height(14.dp))
-
-                                    // Button 1: Solucionado
+                                // Manager can move to Technical Evaluation
+                                if (state.currentRole.canManageAndDelete) {
                                     Button(
-                                        onClick = { viewModel.markAsSolucionado() },
-                                        enabled = !state.isUpdatingStatus && ticket.estatusId != 3,
-                                        colors = ButtonDefaults.buttonColors(containerColor = StatusSolucionadoGreen),
+                                        onClick = { viewModel.markAsEnEvaluacion() },
+                                        enabled = !state.isUpdatingStatus && ticket.estatusId != TicketStatus.EN_EVALUACION.id,
+                                        colors = ButtonDefaults.buttonColors(containerColor = StatusEvaluacionOrange),
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .height(48.dp),
-                                        shape = RoundedCornerShape(12.dp)
+                                        shape = RoundedCornerShape(14.dp)
                                     ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text("✅ Marcar como Solucionado", fontWeight = FontWeight.Bold)
-                                        }
+                                        Icon(Icons.AutoMirrored.Filled.ManageSearch, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(stringResource(R.string.admin_btn_evaluate), fontWeight = FontWeight.SemiBold, color = Color.White)
                                     }
+                                }
 
-                                    Spacer(modifier = Modifier.height(10.dp))
+                                // Technician & Manager: In Repair
+                                Button(
+                                    onClick = { viewModel.markAsEnReparacion() },
+                                    enabled = !state.isUpdatingStatus && ticket.estatusId != TicketStatus.EN_REPARACION.id,
+                                    colors = ButtonDefaults.buttonColors(containerColor = StatusReparacionBlue),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp),
+                                    shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    Icon(Icons.Default.Engineering, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(stringResource(R.string.admin_btn_repair), fontWeight = FontWeight.SemiBold, color = Color.White)
+                                }
 
-                                    // Button 2: Eliminar Reporte
+                                // Technician & Manager: Mark Resolved
+                                Button(
+                                    onClick = { viewModel.markAsSolucionado() },
+                                    enabled = !state.isUpdatingStatus && ticket.estatusId != TicketStatus.SOLUCIONADO.id,
+                                    colors = ButtonDefaults.buttonColors(containerColor = StatusSolucionadoGreen),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp),
+                                    shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(stringResource(R.string.admin_btn_solve), fontWeight = FontWeight.SemiBold, color = Color.White)
+                                }
+
+                                // Only Manager can delete
+                                if (state.currentRole.canManageAndDelete) {
                                     OutlinedButton(
-                                        onClick = { viewModel.deleteReport(onSuccess = onBack) },
+                                        onClick = { showDeleteDialog = true },
                                         enabled = !state.isUpdatingStatus,
                                         colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusRegistradoRed),
+                                        border = BorderStroke(1.dp, StatusRegistradoRed.copy(alpha = 0.45f)),
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .height(48.dp),
-                                        shape = RoundedCornerShape(12.dp)
+                                        shape = RoundedCornerShape(14.dp)
                                     ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp), tint = StatusRegistradoRed)
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text("🗑️ Eliminar Reporte", fontWeight = FontWeight.Bold, color = StatusRegistradoRed)
-                                        }
+                                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(stringResource(R.string.admin_btn_delete), fontWeight = FontWeight.SemiBold)
                                     }
                                 }
                             }
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(30.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
             }
         }
     }
 }
 
-private fun formatDateFull(timestamp: Long): String {
-    val sdf = SimpleDateFormat("EEEE, dd MMMM yyyy - HH:mm:ss", Locale("es", "ES"))
-    return sdf.format(Date(timestamp))
+@Composable
+private fun DetailInfoRow(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = PrimaryCivicBlue,
+            modifier = Modifier.size(19.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+                color = valueColor
+            )
+        }
+    }
 }
