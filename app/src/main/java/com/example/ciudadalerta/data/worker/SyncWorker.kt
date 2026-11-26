@@ -4,11 +4,8 @@ import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.example.ciudadalerta.data.AppDatabase
-import com.example.ciudadalerta.data.LocalTicketRepository
-import com.example.ciudadalerta.data.NetworkTicketRepository
-import com.example.ciudadalerta.data.RetrofitClient
-import com.example.ciudadalerta.data.TicketRepository
+import com.example.ciudadalerta.CiudadAlertaApplication
+import com.example.ciudadalerta.data.DefaultAppContainer
 
 class SyncWorker(
     context: Context,
@@ -16,10 +13,9 @@ class SyncWorker(
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
-        val database = AppDatabase.getDatabase(applicationContext)
-        val localRepo = LocalTicketRepository(database.ticketDao())
-        val networkRepo = NetworkTicketRepository(RetrofitClient.apiService)
-        val repository = TicketRepository(localRepo, networkRepo, applicationContext)
+        val container = (applicationContext as? CiudadAlertaApplication)?.container
+            ?: DefaultAppContainer(applicationContext)
+        val repository = container.ticketRepository
 
         return try {
             val count = repository.syncPendingTickets()

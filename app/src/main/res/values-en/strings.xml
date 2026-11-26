@@ -144,4 +144,8 @@
     <string name="stats_photos_label">With photo</string>
     <string name="stats_ranking_title">Responders</string>
     <string name="stats_no_solved_yet">No resolved tickets yet.</string>
+    <plurals name="stats_solved_tickets">
+        <item quantity="one">%1$d resolved</item>
+        <item quantity="other">%1$d resolved</item>
+    </plurals>
 </resources>

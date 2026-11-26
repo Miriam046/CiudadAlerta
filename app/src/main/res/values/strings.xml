@@ -144,4 +144,8 @@
     <string name="stats_photos_label">Con foto</string>
     <string name="stats_ranking_title">Responsables</string>
     <string name="stats_no_solved_yet">Sin cierres registrados todavía.</string>
+    <plurals name="stats_solved_tickets">
+        <item quantity="one">%1$d resuelto</item>
+        <item quantity="other">%1$d resueltos</item>
+    </plurals>
 </resources>

@@ -18,12 +18,15 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -39,8 +42,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ciudadalerta.R
@@ -56,6 +61,7 @@ import com.example.ciudadalerta.ui.theme.StatusRegistradoRed
 import com.example.ciudadalerta.ui.theme.StatusReparacionBlue
 import com.example.ciudadalerta.ui.theme.StatusSolucionadoGreen
 import com.example.ciudadalerta.ui.theme.SyncPendingIndigo
+import com.example.ciudadalerta.ui.viewmodels.EncargadoMetric
 import com.example.ciudadalerta.ui.viewmodels.EstadisticasViewModel
 
 /**
@@ -259,6 +265,55 @@ fun EstadisticasScreen(
                         }
                     }
                 }
+
+                // Responders Ranking
+                item {
+                    Text(
+                        text = stringResource(R.string.stats_ranking_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+
+                if (state.encargadoMetrics.isEmpty()) {
+                    item {
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.EmojiEvents,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = stringResource(R.string.stats_no_solved_yet),
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    itemsIndexed(state.encargadoMetrics, key = { _, item -> item.email }) { index, encargado ->
+                        EncargadoRankRow(
+                            rank = index + 1,
+                            metric = encargado
+                        )
+                    }
+                }
             }
         }
     }
@@ -313,5 +368,79 @@ private fun MiniInfraMetric(icon: ImageVector, label: String, count: Int, color:
         Spacer(modifier = Modifier.height(4.dp))
         Text(text = "$count", fontWeight = FontWeight.Bold, fontSize = 16.sp)
         Text(text = label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun EncargadoRankRow(rank: Int, metric: EncargadoMetric) {
+    val isTop = rank == 1
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(
+            width = if (isTop) 1.5.dp else 1.dp,
+            color = if (isTop) PrimaryCivicBlue.copy(alpha = 0.45f) else MaterialTheme.colorScheme.outlineVariant
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isTop) PrimaryCivicBlue else PrimaryCivicBlue.copy(alpha = 0.12f))
+            ) {
+                Text(
+                    text = "#$rank",
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 13.sp,
+                    color = if (isTop) Color.White else PrimaryCivicBlue
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = metric.email,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Surface(
+                shape = RoundedCornerShape(999.dp),
+                color = StatusSolucionadoGreen.copy(alpha = 0.12f)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = StatusSolucionadoGreen,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = pluralStringResource(
+                            R.plurals.stats_solved_tickets,
+                            metric.solvedCount,
+                            metric.solvedCount
+                        ),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = StatusSolucionadoGreen
+                    )
+                }
+            }
+        }
     }
 }
