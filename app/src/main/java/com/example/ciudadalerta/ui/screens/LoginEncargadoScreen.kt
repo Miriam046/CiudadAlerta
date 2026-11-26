@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -23,6 +25,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,6 +57,7 @@ import com.example.ciudadalerta.R
 import com.example.ciudadalerta.ui.components.CategorySquircleIcon
 import com.example.ciudadalerta.ui.components.SegmentedPillToggle
 import com.example.ciudadalerta.ui.theme.PrimaryCivicBlue
+import com.example.ciudadalerta.ui.theme.StatusRegistradoRed
 import com.example.ciudadalerta.ui.viewmodels.LoginViewModel
 
 @Composable
@@ -101,7 +105,7 @@ fun LoginEncargadoScreen(
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        // Login / Register Segmented Toggle (Zero role visibility)
+        // Login / Register Segmented Toggle
         SegmentedPillToggle(
             firstLabel = stringResource(R.string.auth_tab_login),
             secondLabel = stringResource(R.string.auth_tab_register),
@@ -110,6 +114,36 @@ fun LoginEncargadoScreen(
         )
 
         Spacer(modifier = Modifier.height(22.dp))
+
+        // Error Banner
+        if (state.errorMessage != null) {
+            Surface(
+                color = StatusRegistradoRed.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, StatusRegistradoRed.copy(alpha = 0.3f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = StatusRegistradoRed,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = state.errorMessage!!,
+                        color = StatusRegistradoRed,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
         // Clean Auth Form Card
         Surface(

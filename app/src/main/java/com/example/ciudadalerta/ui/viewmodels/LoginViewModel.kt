@@ -17,7 +17,8 @@ data class LoginUiState(
     val fullName: String = "",
     val email: String = "",
     val password: String = "",
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null
 )
 
 class LoginViewModel(
@@ -29,75 +30,114 @@ class LoginViewModel(
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
     fun onModeSelected(registerMode: Boolean) {
-        _uiState.update { it.copy(isRegisterMode = registerMode) }
+        _uiState.update { it.copy(isRegisterMode = registerMode, errorMessage = null) }
     }
 
     fun onFullNameChanged(text: String) {
-        _uiState.update { it.copy(fullName = text) }
+        _uiState.update { it.copy(fullName = text, errorMessage = null) }
     }
 
     fun onEmailChanged(text: String) {
-        _uiState.update { it.copy(email = text) }
+        _uiState.update { it.copy(email = text, errorMessage = null) }
     }
 
     fun onPasswordChanged(text: String) {
-        _uiState.update { it.copy(password = text) }
+        _uiState.update { it.copy(password = text, errorMessage = null) }
     }
 
     /**
-     * Resuelve el rol automáticamente desde Supabase (`cuenta_usuario.id_rol`) al iniciar sesión.
-     * En modo Registrarse, crea siempre una cuenta de Ciudadano (`id_rol = 1`) sin mostrar roles en la UI.
+     * Inicia sesión o registra usuario obligatoriamente.
+     * Credenciales fijas de Administrador:
+     * Correo: admin@ciudadalerta.gob (o gestor@ciudadalerta.gob)
+     * Contraseña: admin123
      */
     fun enterApp(onSuccess: () -> Unit) {
         val current = _uiState.value
         val email = current.email.trim()
+        val password = current.password.trim()
         val name = current.fullName.trim()
 
         if (current.isLoading) return
-        _uiState.update { it.copy(isLoading = true) }
+
+        // Validación obligatoria de campos
+        if (email.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "Por favor ingresa tu correo electrónico.") }
+            return
+        }
+        if (password.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "Por favor ingresa tu contraseña.") }
+            return
+        }
+        if (current.isRegisterMode && name.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "Por favor ingresa tu nombre completo.") }
+            return
+        }
+
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
         viewModelScope.launch {
             try {
                 if (current.isRegisterMode) {
-                    val citizenEmail = email.ifBlank { UserRole.CIUDADANO.defaultEmail }
-                    val citizenName = name.ifBlank { UserRole.CIUDADANO.defaultName }
                     repository?.registerUserInCloud(
-                        name = citizenName,
-                        email = citizenEmail,
-                        password = current.password,
+                        name = name,
+                        email = email,
+                        password = password,
                         role = UserRole.CIUDADANO
                     )
                     sessionManager.signInWithRole(
                         role = UserRole.CIUDADANO,
-                        name = citizenName,
-                        email = citizenEmail
+                        name = name,
+                        email = email
                     )
+                    _uiState.update { it.copy(isLoading = false) }
+                    onSuccess()
                 } else {
-                    val cloudUser = if (email.isNotBlank() && repository != null) {
-                        repository.resolveUserFromCloud(email)
-                    } else {
-                        null
+                    // Verificación explícita de Administrador (Gestor Municipal)
+                    val isAdminCred = (email.equals("admin@ciudadalerta.gob", ignoreCase = true) ||
+                            email.equals("gestor@ciudadalerta.gob", ignoreCase = true) ||
+                            email.equals("admin", ignoreCase = true)) && password == "admin123"
+
+                    // Verificación explícita de Técnico de Reparación
+                    val isTechnicianCred = email.equals("cuadrilla@ciudadalerta.gob", ignoreCase = true) && password == "admin123"
+
+                    val resolvedRole: UserRole
+                    val resolvedName: String
+
+                    when {
+                        isAdminCred -> {
+                            resolvedRole = UserRole.GESTOR_MUNICIPAL
+                            resolvedName = "Administrador Municipal"
+                        }
+                        isTechnicianCred -> {
+                            resolvedRole = UserRole.TECNICO_REPARACION
+                            resolvedName = "Técnico de Reparación"
+                        }
+                        else -> {
+                            val cloudUser = if (repository != null) {
+                                repository.resolveUserFromCloud(email)
+                            } else null
+
+                            resolvedRole = when (cloudUser?.idRol) {
+                                1 -> UserRole.CIUDADANO
+                                2 -> UserRole.TECNICO_REPARACION
+                                3 -> UserRole.GESTOR_MUNICIPAL
+                                else -> UserRole.CIUDADANO
+                            }
+                            resolvedName = cloudUser?.nombreCompleto?.takeIf { it.isNotBlank() }
+                                ?: name.ifBlank { resolvedRole.defaultName }
+                        }
                     }
-                    val resolvedRole = when (cloudUser?.idRol) {
-                        1 -> UserRole.CIUDADANO
-                        2 -> UserRole.TECNICO_REPARACION
-                        3 -> UserRole.GESTOR_MUNICIPAL
-                        else -> UserRole.CIUDADANO
-                    }
-                    val resolvedName = cloudUser?.nombreCompleto?.takeIf { it.isNotBlank() }
-                        ?: name.ifBlank { resolvedRole.defaultName }
-                    val resolvedEmail = cloudUser?.correoContacto?.takeIf { it.isNotBlank() }
-                        ?: email.ifBlank { resolvedRole.defaultEmail }
 
                     sessionManager.signInWithRole(
                         role = resolvedRole,
                         name = resolvedName,
-                        email = resolvedEmail
+                        email = email
                     )
+                    _uiState.update { it.copy(isLoading = false) }
+                    onSuccess()
                 }
-            } finally {
-                _uiState.update { it.copy(isLoading = false) }
-                onSuccess()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Error en autenticación: ${e.localizedMessage}") }
             }
         }
     }
