@@ -45,7 +45,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -218,8 +217,9 @@ fun CiudadAlertaApp(
                                 }
                             },
                             onSwitchAccount = {
+                                sessionManager.logout()
                                 navController.navigate(AppRoute.Login.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+                                    popUpTo(navController.graph.id) { inclusive = true }
                                     launchSingleTop = true
                                 }
                             }
@@ -276,10 +276,6 @@ fun CiudadAlertaApp(
     }
 }
 
-/**
- * Barra inferior limpia estilo referencia: superficie blanca minimalista,
- * sin acceso a login de encargado, con 3 vistas principales y botón circular + en Indigo.
- */
 @Composable
 private fun MinimalFloatingBottomBar(
     currentRoute: String?,
@@ -328,7 +324,6 @@ private fun MinimalFloatingBottomBar(
                 }
             }
 
-            // Highlighted circular + action button (inspired by reference circular button)
             Surface(
                 onClick = onCreateReport,
                 shape = CircleShape,

@@ -45,12 +45,6 @@ class LoginViewModel(
         _uiState.update { it.copy(password = text, errorMessage = null) }
     }
 
-    /**
-     * Inicia sesión o registra usuario obligatoriamente.
-     * Credenciales fijas de Administrador:
-     * Correo: admin@ciudadalerta.gob (o gestor@ciudadalerta.gob)
-     * Contraseña: admin123
-     */
     fun enterApp(onSuccess: () -> Unit) {
         val current = _uiState.value
         val email = current.email.trim()
@@ -59,7 +53,6 @@ class LoginViewModel(
 
         if (current.isLoading) return
 
-        // Validación obligatoria de campos
         if (email.isBlank()) {
             _uiState.update { it.copy(errorMessage = "Por favor ingresa tu correo electrónico.") }
             return
@@ -92,12 +85,10 @@ class LoginViewModel(
                     _uiState.update { it.copy(isLoading = false) }
                     onSuccess()
                 } else {
-                    // Verificación explícita de Administrador (Gestor Municipal)
                     val isAdminCred = (email.equals("admin@ciudadalerta.gob", ignoreCase = true) ||
                             email.equals("gestor@ciudadalerta.gob", ignoreCase = true) ||
                             email.equals("admin", ignoreCase = true)) && password == "admin123"
 
-                    // Verificación explícita de Técnico de Reparación
                     val isTechnicianCred = email.equals("cuadrilla@ciudadalerta.gob", ignoreCase = true) && password == "admin123"
 
                     val resolvedRole: UserRole
@@ -113,17 +104,33 @@ class LoginViewModel(
                             resolvedName = "Técnico de Reparación"
                         }
                         else -> {
-                            val cloudUser = if (repository != null) {
-                                repository.resolveUserFromCloud(email)
-                            } else null
+                            val cloudUser = repository?.resolveUserFromCloud(email)
+                            if (cloudUser == null) {
+                                _uiState.update {
+                                    it.copy(
+                                        isLoading = false,
+                                        errorMessage = "Credenciales inválidas o usuario no encontrado en el servidor."
+                                    )
+                                }
+                                return@launch
+                            }
 
-                            resolvedRole = when (cloudUser?.idRol) {
+                            resolvedRole = when (cloudUser.idRol) {
                                 1 -> UserRole.CIUDADANO
                                 2 -> UserRole.TECNICO_REPARACION
                                 3 -> UserRole.GESTOR_MUNICIPAL
-                                else -> UserRole.CIUDADANO
+                                else -> {
+                                    _uiState.update {
+                                        it.copy(
+                                            isLoading = false,
+                                            errorMessage = "Rol no válido recibido del servidor (idRol=${cloudUser.idRol})."
+                                        )
+                                    }
+                                    return@launch
+                                }
                             }
-                            resolvedName = cloudUser?.nombreCompleto?.takeIf { it.isNotBlank() }
+
+                            resolvedName = cloudUser.nombreCompleto?.takeIf { it.isNotBlank() }
                                 ?: name.ifBlank { resolvedRole.defaultName }
                         }
                     }
@@ -137,7 +144,12 @@ class LoginViewModel(
                     onSuccess()
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Error en autenticación: ${e.localizedMessage}") }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "Error en autenticación: ${e.localizedMessage}"
+                    )
+                }
             }
         }
     }
