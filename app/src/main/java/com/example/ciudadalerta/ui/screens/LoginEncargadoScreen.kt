@@ -10,12 +10,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -44,9 +47,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -67,18 +73,21 @@ fun LoginEncargadoScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
-            .verticalScroll(rememberScrollState())
+            .navigationBarsPadding()
+            .imePadding()
+            .verticalScroll(scrollState)
             .padding(horizontal = 24.dp, vertical = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Brand Squircle Icon
         CategorySquircleIcon(
             icon = Icons.Default.LocationCity,
             color = PrimaryCivicBlue,
@@ -105,7 +114,6 @@ fun LoginEncargadoScreen(
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        // Login / Register Segmented Toggle
         SegmentedPillToggle(
             firstLabel = stringResource(R.string.auth_tab_login),
             secondLabel = stringResource(R.string.auth_tab_register),
@@ -115,7 +123,6 @@ fun LoginEncargadoScreen(
 
         Spacer(modifier = Modifier.height(22.dp))
 
-        // Error Banner
         if (state.errorMessage != null) {
             Surface(
                 color = StatusRegistradoRed.copy(alpha = 0.12f),
@@ -145,7 +152,6 @@ fun LoginEncargadoScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Clean Auth Form Card
         Surface(
             shape = RoundedCornerShape(22.dp),
             color = MaterialTheme.colorScheme.surface,
@@ -162,6 +168,13 @@ fun LoginEncargadoScreen(
                         onValueChange = { viewModel.onFullNameChanged(it) },
                         label = { Text(stringResource(R.string.auth_name_label)) },
                         leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Text,
+                            imeAction = ImeAction.Next
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                        ),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
@@ -177,7 +190,13 @@ fun LoginEncargadoScreen(
                     onValueChange = { viewModel.onEmailChanged(it) },
                     label = { Text(stringResource(R.string.auth_email_label)) },
                     leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                    ),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
@@ -201,7 +220,16 @@ fun LoginEncargadoScreen(
                         }
                     },
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            focusManager.clearFocus()
+                            viewModel.enterApp(onSuccess = onLoginSuccess)
+                        }
+                    ),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
@@ -216,7 +244,10 @@ fun LoginEncargadoScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = { viewModel.enterApp(onSuccess = onLoginSuccess) },
+            onClick = {
+                focusManager.clearFocus()
+                viewModel.enterApp(onSuccess = onLoginSuccess)
+            },
             enabled = !state.isLoading,
             modifier = Modifier
                 .fillMaxWidth()
