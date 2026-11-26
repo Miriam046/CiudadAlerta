@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -81,6 +82,7 @@ import com.example.ciudadalerta.ui.components.getCategoryVisual
 import com.example.ciudadalerta.ui.theme.PrimaryCivicBlue
 import com.example.ciudadalerta.ui.theme.StatusRegistradoRed
 import com.example.ciudadalerta.ui.theme.UrgentRoseRed
+import com.example.ciudadalerta.ui.viewmodels.ReportarUiState
 import com.example.ciudadalerta.ui.viewmodels.ReportarViewModel
 import kotlinx.coroutines.launch
 import java.io.File
@@ -90,6 +92,7 @@ import kotlin.random.Random
 @Composable
 fun ReportarScreen(
     viewModel: ReportarViewModel,
+    isExpandedScreen: Boolean = false,
     onBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -159,11 +162,39 @@ fun ReportarScreen(
         }
     }
 
+    val onTakePhotoClick: () -> Unit = {
+        val granted = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+        if (granted) launchCamera() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+    }
+
+    val onPickGalleryClick: () -> Unit = {
+        pickMediaLauncher.launch(
+            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+        )
+    }
+
+    val onGpsClick: () -> Unit = {
+        if (LocationHelper.hasLocationPermission(context)) {
+            refreshLocation()
+        } else {
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
+            .imePadding()
     ) {
         MinimalHeader(
             title = stringResource(R.string.report_title),
@@ -178,349 +209,448 @@ fun ReportarScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             if (state.errorMessage != null) {
-                Surface(
-                    color = StatusRegistradoRed.copy(alpha = 0.10f),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Warning, contentDescription = null, tint = StatusRegistradoRed)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = state.errorMessage!!,
-                            color = StatusRegistradoRed,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
+                ReportErrorBanner(message = state.errorMessage!!.asString())
             }
 
-            // 1. Clean Pastel Squircle Category Row
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = stringResource(R.string.report_step_category),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    items(TicketCategory.entries) { cat ->
-                        val visual = getCategoryVisual(cat.id)
-                        val isSelected = state.categoriaId == cat.id
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .width(64.dp)
-                                .clickable { viewModel.onCategoriaSelected(cat.id) }
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .size(58.dp)
-                                    .clip(RoundedCornerShape(18.dp))
-                                    .then(
-                                        if (isSelected) {
-                                            Modifier.border(2.5.dp, visual.color, RoundedCornerShape(18.dp))
-                                        } else {
-                                            Modifier
-                                        }
-                                    )
-                                    .padding(if (isSelected) 3.dp else 0.dp)
-                            ) {
-                                CategorySquircleIcon(
-                                    icon = visual.icon,
-                                    color = visual.color,
-                                    size = 52.dp,
-                                    iconSize = 24.dp,
-                                    cornerRadius = 15.dp
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = stringResource(cat.shortLabelRes),
-                                fontSize = 11.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isSelected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 2. Description
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = stringResource(R.string.report_step_description),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                OutlinedTextField(
-                    value = state.descripcion,
-                    onValueChange = { viewModel.onDescripcionChanged(it) },
-                    placeholder = { Text(stringResource(R.string.lbl_description)) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    maxLines = 5,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedBorderColor = PrimaryCivicBlue,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-                    )
-                )
-            }
-
-            // 3. Photographic Evidence
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (isExpandedScreen) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.spacedBy(20.dp),
+                    verticalAlignment = Alignment.Top
                 ) {
-                    Text(
-                        text = stringResource(R.string.report_step_evidence),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    if (state.fotoRuta != null) {
-                        TextButton(onClick = { viewModel.onFotoSelected(null) }) {
-                            Icon(
-                                imageVector = Icons.Default.DeleteOutline,
-                                contentDescription = null,
-                                tint = StatusRegistradoRed,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(stringResource(R.string.btn_remove_photo), color = StatusRegistradoRed)
-                        }
-                    }
-                }
-
-                if (state.fotoRuta != null) {
-                    PhotoEvidenceCard(fotoRuta = state.fotoRuta!!, categoriaId = state.categoriaId)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = PrimaryCivicBlue,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = stringResource(R.string.photo_captured_ok),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = PrimaryCivicBlue
-                        )
-                    }
-                } else {
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                        modifier = Modifier.fillMaxWidth()
+                    Column(
+                        modifier = Modifier.weight(0.54f),
+                        verticalArrangement = Arrangement.spacedBy(18.dp)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.photo_placeholder_hint),
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                FilledTonalButton(
-                                    onClick = {
-                                        val granted = ContextCompat.checkSelfPermission(
-                                            context,
-                                            Manifest.permission.CAMERA
-                                        ) == PackageManager.PERMISSION_GRANTED
-                                        if (granted) launchCamera() else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                                    },
-                                    shape = RoundedCornerShape(14.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(17.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(stringResource(R.string.btn_take_photo), fontWeight = FontWeight.SemiBold)
-                                }
+                        CategoryStepSection(
+                            selectedCategoryId = state.categoriaId,
+                            onSelectCategory = { viewModel.onCategoriaSelected(it) }
+                        )
+                        DescriptionStepSection(
+                            description = state.descripcion,
+                            onDescriptionChanged = { viewModel.onDescripcionChanged(it) },
+                            minHeight = 160.dp
+                        )
+                        UrgencyToggleCard(
+                            isUrgent = state.isUrgent,
+                            onToggle = { viewModel.onUrgentToggled(it) }
+                        )
+                    }
 
-                                OutlinedButton(
-                                    onClick = {
-                                        pickMediaLauncher.launch(
-                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                        )
-                                    },
-                                    shape = RoundedCornerShape(14.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(17.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(stringResource(R.string.btn_pick_gallery), fontWeight = FontWeight.SemiBold)
-                                }
-                            }
-                        }
+                    Column(
+                        modifier = Modifier.weight(0.46f),
+                        verticalArrangement = Arrangement.spacedBy(18.dp)
+                    ) {
+                        PhotoEvidenceStepSection(
+                            fotoRuta = state.fotoRuta,
+                            categoriaId = state.categoriaId,
+                            onRemovePhoto = { viewModel.onFotoSelected(null) },
+                            onTakePhoto = onTakePhotoClick,
+                            onPickGallery = onPickGalleryClick
+                        )
+                        LocationStepSection(
+                            state = state,
+                            onRefreshGps = onGpsClick
+                        )
+                        SubmitReportButton(
+                            isSaving = state.isSaving,
+                            onClick = { viewModel.submitReport(onSuccess = onBack) }
+                        )
                     }
                 }
-            }
-
-            // 4. Location
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = stringResource(R.string.report_step_location),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
+            } else {
+                CategoryStepSection(
+                    selectedCategoryId = state.categoriaId,
+                    onSelectCategory = { viewModel.onCategoriaSelected(it) }
                 )
-                MiniGpsMapCanvas(
-                    latitud = state.latitud,
-                    longitud = state.longitud,
-                    categoriaId = state.categoriaId
+                DescriptionStepSection(
+                    description = state.descripcion,
+                    onDescriptionChanged = { viewModel.onDescripcionChanged(it) }
                 )
-                Surface(
-                    shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = PrimaryCivicBlue)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
-                                Text(
-                                    text = "%.5f, %.5f".format(Locale.US, state.latitud, state.longitud),
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 13.sp
-                                )
-                                Text(
-                                    text = stringResource(
-                                        if (state.isRealGps) R.string.gps_source_real else R.string.gps_source_preset
-                                    ),
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        FilledTonalButton(
-                            onClick = {
-                                if (LocationHelper.hasLocationPermission(context)) {
-                                    refreshLocation()
-                                } else {
-                                    locationPermissionLauncher.launch(
-                                        arrayOf(
-                                            Manifest.permission.ACCESS_FINE_LOCATION,
-                                            Manifest.permission.ACCESS_COARSE_LOCATION
-                                        )
-                                    )
-                                }
-                            },
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.MyLocation, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("GPS", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                }
-            }
-
-            // 5. Urgency Toggle
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(
-                    width = if (state.isUrgent) 1.5.dp else 1.dp,
-                    color = if (state.isUrgent) UrgentRoseRed else MaterialTheme.colorScheme.outlineVariant
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { viewModel.onUrgentToggled(!state.isUrgent) }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        CategorySquircleIcon(
-                            icon = Icons.Default.PriorityHigh,
-                            color = UrgentRoseRed,
-                            size = 38.dp,
-                            iconSize = 19.dp,
-                            cornerRadius = 11.dp
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = stringResource(R.string.chk_urgent),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
-                            )
-                            Text(
-                                text = stringResource(R.string.chk_urgent_sub),
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    Switch(
-                        checked = state.isUrgent,
-                        onCheckedChange = { viewModel.onUrgentToggled(it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = UrgentRoseRed
-                        )
-                    )
-                }
-            }
-
-            Button(
-                onClick = { viewModel.submitReport(onSuccess = onBack) },
-                enabled = !state.isSaving,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryCivicBlue)
-            ) {
-                if (state.isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp)
-                } else {
-                    Text(
-                        text = stringResource(R.string.btn_save),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = Color.White
-                    )
-                }
+                PhotoEvidenceStepSection(
+                    fotoRuta = state.fotoRuta,
+                    categoriaId = state.categoriaId,
+                    onRemovePhoto = { viewModel.onFotoSelected(null) },
+                    onTakePhoto = onTakePhotoClick,
+                    onPickGallery = onPickGalleryClick
+                )
+                LocationStepSection(
+                    state = state,
+                    onRefreshGps = onGpsClick
+                )
+                UrgencyToggleCard(
+                    isUrgent = state.isUrgent,
+                    onToggle = { viewModel.onUrgentToggled(it) }
+                )
+                SubmitReportButton(
+                    isSaving = state.isSaving,
+                    onClick = { viewModel.submitReport(onSuccess = onBack) }
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun ReportErrorBanner(message: String) {
+    Surface(
+        color = StatusRegistradoRed.copy(alpha = 0.10f),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Warning, contentDescription = null, tint = StatusRegistradoRed)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = message,
+                color = StatusRegistradoRed,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
+private fun CategoryStepSection(
+    selectedCategoryId: Int,
+    onSelectCategory: (Int) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            text = stringResource(R.string.report_step_category),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold
+        )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            items(TicketCategory.entries) { cat ->
+                val visual = getCategoryVisual(cat.id)
+                val isSelected = selectedCategoryId == cat.id
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .width(64.dp)
+                        .clickable { onSelectCategory(cat.id) }
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(58.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .then(
+                                if (isSelected) {
+                                    Modifier.border(2.5.dp, visual.color, RoundedCornerShape(18.dp))
+                                } else {
+                                    Modifier
+                                }
+                            )
+                            .padding(if (isSelected) 3.dp else 0.dp)
+                    ) {
+                        CategorySquircleIcon(
+                            icon = visual.icon,
+                            color = visual.color,
+                            size = 52.dp,
+                            iconSize = 24.dp,
+                            cornerRadius = 15.dp
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = stringResource(cat.shortLabelRes),
+                        fontSize = 11.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DescriptionStepSection(
+    description: String,
+    onDescriptionChanged: (String) -> Unit,
+    minHeight: androidx.compose.ui.unit.Dp = 120.dp
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.report_step_description),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold
+        )
+        OutlinedTextField(
+            value = description,
+            onValueChange = onDescriptionChanged,
+            placeholder = { Text(stringResource(R.string.lbl_description)) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(minHeight),
+            shape = RoundedCornerShape(18.dp),
+            maxLines = 6,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                focusedBorderColor = PrimaryCivicBlue,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+            )
+        )
+    }
+}
+
+@Composable
+private fun PhotoEvidenceStepSection(
+    fotoRuta: String?,
+    categoriaId: Int,
+    onRemovePhoto: () -> Unit,
+    onTakePhoto: () -> Unit,
+    onPickGallery: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.report_step_evidence),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+            if (fotoRuta != null) {
+                TextButton(onClick = onRemovePhoto) {
+                    Icon(
+                        imageVector = Icons.Default.DeleteOutline,
+                        contentDescription = null,
+                        tint = StatusRegistradoRed,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(stringResource(R.string.btn_remove_photo), color = StatusRegistradoRed)
+                }
+            }
+        }
+
+        if (fotoRuta != null) {
+            PhotoEvidenceCard(fotoRuta = fotoRuta, categoriaId = categoriaId)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = PrimaryCivicBlue,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = stringResource(R.string.photo_captured_ok),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = PrimaryCivicBlue
+                )
+            }
+        } else {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.photo_placeholder_hint),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        FilledTonalButton(
+                            onClick = onTakePhoto,
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(17.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(stringResource(R.string.btn_take_photo), fontWeight = FontWeight.SemiBold)
+                        }
+
+                        OutlinedButton(
+                            onClick = onPickGallery,
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(17.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(stringResource(R.string.btn_pick_gallery), fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LocationStepSection(
+    state: ReportarUiState,
+    onRefreshGps: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            text = stringResource(R.string.report_step_location),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold
+        )
+        MiniGpsMapCanvas(
+            latitud = state.latitud,
+            longitud = state.longitud,
+            categoriaId = state.categoriaId
+        )
+        Surface(
+            shape = RoundedCornerShape(18.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = PrimaryCivicBlue)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = "%.5f, %.5f".format(Locale.US, state.latitud, state.longitud),
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp
+                        )
+                        Text(
+                            text = stringResource(
+                                if (state.isRealGps) R.string.gps_source_real else R.string.gps_source_preset
+                            ),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                FilledTonalButton(
+                    onClick = onRefreshGps,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.MyLocation, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.action_gps_short),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UrgencyToggleCard(
+    isUrgent: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(
+            width = if (isUrgent) 1.5.dp else 1.dp,
+            color = if (isUrgent) UrgentRoseRed else MaterialTheme.colorScheme.outlineVariant
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggle(!isUrgent) }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                CategorySquircleIcon(
+                    icon = Icons.Default.PriorityHigh,
+                    color = UrgentRoseRed,
+                    size = 38.dp,
+                    iconSize = 19.dp,
+                    cornerRadius = 11.dp
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = stringResource(R.string.chk_urgent),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        text = stringResource(R.string.chk_urgent_sub),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Switch(
+                checked = isUrgent,
+                onCheckedChange = onToggle,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = UrgentRoseRed
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun SubmitReportButton(
+    isSaving: Boolean,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        enabled = !isSaving,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(54.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = PrimaryCivicBlue)
+    ) {
+        if (isSaving) {
+            CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp)
+        } else {
+            Text(
+                text = stringResource(R.string.btn_save),
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                color = Color.White
+            )
         }
     }
 }

@@ -3,8 +3,10 @@ package com.example.ciudadalerta.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.ciudadalerta.R
 import com.example.ciudadalerta.data.TicketRepository
 import com.example.ciudadalerta.domain.usecase.CreateTicketUseCase
+import com.example.ciudadalerta.ui.components.UiText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,7 +23,7 @@ data class ReportarUiState(
     val isUrgent: Boolean = false,
     val isSaving: Boolean = false,
     val isSuccess: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: UiText? = null
 )
 
 class ReportarViewModel(private val repository: TicketRepository) : ViewModel() {
@@ -67,7 +69,9 @@ class ReportarViewModel(private val repository: TicketRepository) : ViewModel() 
             }
             if (current.descripcion.isBlank()) {
                 shouldReturn = true
-                return@update current.copy(errorMessage = "Por favor ingresa una descripción detallada del problema.")
+                return@update current.copy(
+                    errorMessage = UiText.StringResource(R.string.err_report_empty_desc)
+                )
             }
 
             currentDesc = current.descripcion
@@ -98,7 +102,10 @@ class ReportarViewModel(private val repository: TicketRepository) : ViewModel() 
                 _uiState.update {
                     it.copy(
                         isSaving = false,
-                        errorMessage = "Error al guardar el reporte: ${e.localizedMessage}"
+                        errorMessage = UiText.StringResource(
+                            R.string.err_report_save_failed,
+                            e.localizedMessage ?: ""
+                        )
                     )
                 }
             }

@@ -495,7 +495,7 @@ fun TicketCardItem(
                     )
                     if (!ticket.isSynced) {
                         Text(
-                            text = "• Offline",
+                            text = "• ${stringResource(R.string.badge_offline)}",
                             fontSize = 11.sp,
                             color = SyncPendingIndigo
                         )
@@ -839,7 +839,7 @@ fun PhotoEvidenceCard(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "$categoryLabel • Offline-First",
+                            text = stringResource(R.string.evidence_offline_first_label, categoryLabel),
                             color = Color.White.copy(alpha = 0.85f),
                             fontSize = 11.sp
                         )

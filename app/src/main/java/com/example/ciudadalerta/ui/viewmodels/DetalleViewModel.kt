@@ -3,13 +3,16 @@ package com.example.ciudadalerta.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.ciudadalerta.R
 import com.example.ciudadalerta.data.SessionManager
 import com.example.ciudadalerta.data.TicketEntity
 import com.example.ciudadalerta.data.TicketRepository
+import com.example.ciudadalerta.domain.model.MaintenanceCrew
 import com.example.ciudadalerta.domain.model.MaintenanceCrews
 import com.example.ciudadalerta.domain.model.TicketStatus
 import com.example.ciudadalerta.domain.model.UserRole
 import com.example.ciudadalerta.domain.usecase.AdvanceTicketStatusUseCase
+import com.example.ciudadalerta.ui.components.UiText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,8 +26,8 @@ data class DetalleUiState(
     val encargadoEmail: String? = null,
     val isLoading: Boolean = true,
     val isUpdatingStatus: Boolean = false,
-    val actionFeedback: String? = null,
-    val errorMessage: String? = null
+    val actionFeedback: UiText? = null,
+    val errorMessage: UiText? = null
 )
 
 class DetalleViewModel(
@@ -84,14 +87,18 @@ class DetalleViewModel(
     fun markAsEnEvaluacion() {
         updatePhase(
             nextStatus = TicketStatus.EN_EVALUACION,
-            feedbackBuilder = { id, crew -> "Ticket #$id en Evaluación ($crew)." }
+            feedbackBuilder = { id, crew ->
+                UiText.StringResource(R.string.msg_ticket_in_evaluation, id, localizedCrew(crew))
+            }
         )
     }
 
     fun markAsEnReparacion() {
         updatePhase(
             nextStatus = TicketStatus.EN_REPARACION,
-            feedbackBuilder = { id, crew -> "Ticket #$id en Reparación ($crew)." }
+            feedbackBuilder = { id, crew ->
+                UiText.StringResource(R.string.msg_ticket_in_repair, id, localizedCrew(crew))
+            }
         )
     }
 
@@ -100,14 +107,20 @@ class DetalleViewModel(
         updatePhase(
             nextStatus = TicketStatus.SOLUCIONADO,
             solucionadoPor = encargadoEmail,
-            feedbackBuilder = { id, _ -> "Ticket #$id marcado como Solucionado." }
+            feedbackBuilder = { id, _ ->
+                UiText.StringResource(R.string.msg_ticket_solved, id)
+            }
         )
     }
+
+    private fun localizedCrew(crew: String): UiText =
+        MaintenanceCrew.fromDbValue(crew)?.let { UiText.StringResource(it.labelRes) }
+            ?: UiText.DynamicString(crew)
 
     private fun updatePhase(
         nextStatus: TicketStatus,
         solucionadoPor: String? = null,
-        feedbackBuilder: (Int, String) -> String
+        feedbackBuilder: (Int, String) -> UiText
     ) {
         val currentTicket = _uiState.value.ticket ?: return
         val crew = _uiState.value.selectedCrew
@@ -130,7 +143,10 @@ class DetalleViewModel(
                 _uiState.update {
                     it.copy(
                         isUpdatingStatus = false,
-                        errorMessage = "Error al actualizar: ${e.localizedMessage}"
+                        errorMessage = UiText.StringResource(
+                            R.string.err_detail_update_failed,
+                            e.localizedMessage ?: ""
+                        )
                     )
                 }
             }
@@ -146,9 +162,9 @@ class DetalleViewModel(
                 it.copy(
                     isUpdatingStatus = false,
                     actionFeedback = if (ok) {
-                        "Ticket #${currentTicket.id} sincronizado."
+                        UiText.StringResource(R.string.msg_ticket_synced, currentTicket.id)
                     } else {
-                        "Guardado localmente en modo Offline."
+                        UiText.StringResource(R.string.msg_ticket_saved_offline)
                     }
                 )
             }
@@ -167,7 +183,10 @@ class DetalleViewModel(
                 _uiState.update {
                     it.copy(
                         isUpdatingStatus = false,
-                        errorMessage = "Error al eliminar: ${e.localizedMessage}"
+                        errorMessage = UiText.StringResource(
+                            R.string.err_detail_delete_failed,
+                            e.localizedMessage ?: ""
+                        )
                     )
                 }
             }

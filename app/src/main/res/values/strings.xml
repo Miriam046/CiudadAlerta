@@ -19,9 +19,9 @@
     <string name="auth_tab_login">Iniciar sesión</string>
     <string name="auth_tab_register">Registrarse</string>
     <string name="auth_select_role">Selecciona tu rol</string>
-    <string name="auth_name_label">Nombre completo (opcional)</string>
-    <string name="auth_email_label">Correo electrónico (opcional)</string>
-    <string name="auth_password_label">Contraseña (opcional)</string>
+    <string name="auth_name_label">Nombre completo</string>
+    <string name="auth_email_label">Correo electrónico</string>
+    <string name="auth_password_label">Contraseña</string>
     <string name="auth_btn_enter">Entrar</string>
     <string name="auth_btn_register">Crear cuenta y entrar</string>
     <string name="auth_citizen_only_note">El registro en la app es exclusivo para ciudadanos</string>
@@ -142,10 +142,45 @@
     <string name="stats_synced_label">Sincronizados</string>
     <string name="stats_offline_label">Offline</string>
     <string name="stats_photos_label">Con foto</string>
+    <string name="stats_category_summary">%1$d reportes • %2$d resueltos</string>
     <string name="stats_ranking_title">Responsables</string>
     <string name="stats_no_solved_yet">Sin cierres registrados todavía.</string>
     <plurals name="stats_solved_tickets">
         <item quantity="one">%1$d resuelto</item>
         <item quantity="other">%1$d resueltos</item>
     </plurals>
+
+    <!-- Comunes y Cuadrillas -->
+    <string name="ticket_number">Ticket #%1$d</string>
+    <string name="action_open_maps_short">Maps</string>
+    <string name="action_gps_short">GPS</string>
+    <string name="evidence_offline_first_label">%1$s • Offline-First</string>
+    <string name="crew_roads">Cuadrilla Vialidad Norte</string>
+    <string name="crew_lighting">Cuadrilla Alumbrado Público</string>
+    <string name="crew_water">Brigada Hidráulica Municipal</string>
+    <string name="crew_security">Patrulla Seguridad Urbana</string>
+    <string name="crew_waste">Brigada Limpia y Residuos</string>
+
+    <!-- Mensajes de validación, sincronización y error -->
+    <string name="err_login_empty_email">Por favor ingresa tu correo electrónico.</string>
+    <string name="err_login_empty_password">Por favor ingresa tu contraseña.</string>
+    <string name="err_login_empty_name">Por favor ingresa tu nombre completo.</string>
+    <string name="err_login_invalid_user">Credenciales inválidas o usuario no encontrado en el servidor.</string>
+    <string name="err_login_invalid_role">Rol no válido recibido del servidor (idRol=%1$d).</string>
+    <string name="err_login_generic">Error en autenticación: %1$s</string>
+    <string name="msg_supabase_not_configured">Falta pegar SUPABASE_URL y SUPABASE_ANON_KEY en local.properties</string>
+    <string name="msg_sync_up_to_date">Supabase y Room están al día.</string>
+    <plurals name="msg_sync_changes_count">
+        <item quantity="one">Sincronizado %1$d cambio con Supabase.</item>
+        <item quantity="other">Sincronizados %1$d cambios con Supabase.</item>
+    </plurals>
+    <string name="err_report_empty_desc">Por favor ingresa una descripción detallada del problema.</string>
+    <string name="err_report_save_failed">Error al guardar el reporte: %1$s</string>
+    <string name="msg_ticket_in_evaluation">Ticket #%1$d en Evaluación (%2$s).</string>
+    <string name="msg_ticket_in_repair">Ticket #%1$d en Reparación (%2$s).</string>
+    <string name="msg_ticket_solved">Ticket #%1$d marcado como Solucionado.</string>
+    <string name="msg_ticket_synced">Ticket #%1$d sincronizado.</string>
+    <string name="msg_ticket_saved_offline">Guardado localmente en modo Offline.</string>
+    <string name="err_detail_update_failed">Error al actualizar: %1$s</string>
+    <string name="err_detail_delete_failed">Error al eliminar: %1$s</string>
 </resources>

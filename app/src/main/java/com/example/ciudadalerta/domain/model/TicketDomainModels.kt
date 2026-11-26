@@ -34,14 +34,24 @@ enum class TicketCategory(
     }
 }
 
+enum class MaintenanceCrew(
+    val dbValue: String,
+    @param:StringRes val labelRes: Int
+) {
+    VIALIDAD("Cuadrilla Vialidad Norte", R.string.crew_roads),
+    ALUMBRADO("Cuadrilla Alumbrado Público", R.string.crew_lighting),
+    HIDRAULICA("Brigada Hidráulica Municipal", R.string.crew_water),
+    SEGURIDAD("Patrulla Seguridad Urbana", R.string.crew_security),
+    LIMPIA("Brigada Limpia y Residuos", R.string.crew_waste);
+
+    companion object {
+        fun fromDbValue(value: String?): MaintenanceCrew? =
+            entries.firstOrNull { it.dbValue == value }
+    }
+}
+
 object MaintenanceCrews {
-    val availableCrews = listOf(
-        "Cuadrilla Vialidad Norte",
-        "Cuadrilla Alumbrado Público",
-        "Brigada Hidráulica Municipal",
-        "Patrulla Seguridad Urbana",
-        "Brigada Limpia y Residuos"
-    )
+    val availableCrews: List<String> = MaintenanceCrew.entries.map { it.dbValue }
 
     fun defaultForCategory(categoriaId: Int): String = when (categoriaId) {
         1 -> availableCrews[0]

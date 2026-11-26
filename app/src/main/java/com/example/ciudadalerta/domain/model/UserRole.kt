@@ -41,6 +41,13 @@ enum class UserRole(
     val canManageAndDelete: Boolean
         get() = this == GESTOR_MUNICIPAL
 
+    fun isDefaultName(name: String?): Boolean {
+        val trimmed = name?.trim().orEmpty()
+        return trimmed.isBlank() ||
+            trimmed.equals(defaultName, ignoreCase = true) ||
+            trimmed.equals("Administrador Municipal", ignoreCase = true)
+    }
+
     companion object {
         fun fromKey(key: String?): UserRole =
             entries.firstOrNull { it.key == key } ?: CIUDADANO

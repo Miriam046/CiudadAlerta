@@ -19,9 +19,9 @@
     <string name="auth_tab_login">Sign in</string>
     <string name="auth_tab_register">Sign up</string>
     <string name="auth_select_role">Select your role</string>
-    <string name="auth_name_label">Full name (optional)</string>
-    <string name="auth_email_label">Email address (optional)</string>
-    <string name="auth_password_label">Password (optional)</string>
+    <string name="auth_name_label">Full name</string>
+    <string name="auth_email_label">Email address</string>
+    <string name="auth_password_label">Password</string>
     <string name="auth_btn_enter">Continue</string>
     <string name="auth_btn_register">Create account &amp; continue</string>
     <string name="auth_citizen_only_note">In-app sign-up is exclusively for citizens</string>
@@ -142,10 +142,45 @@
     <string name="stats_synced_label">Synced</string>
     <string name="stats_offline_label">Offline</string>
     <string name="stats_photos_label">With photo</string>
+    <string name="stats_category_summary">%1$d reports • %2$d resolved</string>
     <string name="stats_ranking_title">Responders</string>
     <string name="stats_no_solved_yet">No resolved tickets yet.</string>
     <plurals name="stats_solved_tickets">
         <item quantity="one">%1$d resolved</item>
         <item quantity="other">%1$d resolved</item>
     </plurals>
+
+    <!-- Common & Crews -->
+    <string name="ticket_number">Ticket #%1$d</string>
+    <string name="action_open_maps_short">Maps</string>
+    <string name="action_gps_short">GPS</string>
+    <string name="evidence_offline_first_label">%1$s • Offline-First</string>
+    <string name="crew_roads">North Roads Crew</string>
+    <string name="crew_lighting">Street Lighting Crew</string>
+    <string name="crew_water">Municipal Water Brigade</string>
+    <string name="crew_security">Urban Safety Patrol</string>
+    <string name="crew_waste">Waste &amp; Sanitation Brigade</string>
+
+    <!-- Validation, sync and error messages -->
+    <string name="err_login_empty_email">Please enter your email address.</string>
+    <string name="err_login_empty_password">Please enter your password.</string>
+    <string name="err_login_empty_name">Please enter your full name.</string>
+    <string name="err_login_invalid_user">Invalid credentials or user not found on the server.</string>
+    <string name="err_login_invalid_role">Invalid role received from server (roleId=%1$d).</string>
+    <string name="err_login_generic">Authentication error: %1$s</string>
+    <string name="msg_supabase_not_configured">Missing SUPABASE_URL and SUPABASE_ANON_KEY in local.properties</string>
+    <string name="msg_sync_up_to_date">Supabase and Room are up to date.</string>
+    <plurals name="msg_sync_changes_count">
+        <item quantity="one">Synced %1$d change with Supabase.</item>
+        <item quantity="other">Synced %1$d changes with Supabase.</item>
+    </plurals>
+    <string name="err_report_empty_desc">Please enter a detailed description of the issue.</string>
+    <string name="err_report_save_failed">Error saving report: %1$s</string>
+    <string name="msg_ticket_in_evaluation">Ticket #%1$d in Evaluation (%2$s).</string>
+    <string name="msg_ticket_in_repair">Ticket #%1$d in Repair (%2$s).</string>
+    <string name="msg_ticket_solved">Ticket #%1$d marked as Resolved.</string>
+    <string name="msg_ticket_synced">Ticket #%1$d synced.</string>
+    <string name="msg_ticket_saved_offline">Saved locally in Offline mode.</string>
+    <string name="err_detail_update_failed">Update error: %1$s</string>
+    <string name="err_detail_delete_failed">Delete error: %1$s</string>
 </resources>

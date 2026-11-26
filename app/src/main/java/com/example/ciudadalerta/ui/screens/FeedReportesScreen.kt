@@ -68,6 +68,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -108,13 +109,14 @@ fun FeedReportesScreen(
     onSwitchAccount: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     var searchExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.syncMessage) {
         val message = state.syncMessage
         if (message != null) {
-            snackbarHostState.showSnackbar(message)
+            snackbarHostState.showSnackbar(message.asString(context))
             viewModel.clearSyncMessage()
         }
     }
@@ -255,7 +257,10 @@ private fun FeedHomeContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val roleTitle = stringResource(state.currentRole.titleRes)
-                val badgeText = if (state.userName.isBlank() || state.userName.equals(roleTitle, ignoreCase = true)) {
+                val badgeText = if (
+                    state.currentRole.isDefaultName(state.userName) ||
+                    state.userName.equals(roleTitle, ignoreCase = true)
+                ) {
                     roleTitle
                 } else {
                     "${state.userName} • $roleTitle"
@@ -624,7 +629,7 @@ private fun TabletPreviewPane(
         }
 
         Text(
-            text = "Ticket #${ticket.id} • ${formatDateFull(ticket.fecha)}",
+            text = "${stringResource(R.string.ticket_number, ticket.id)} • ${formatDateFull(ticket.fecha)}",
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

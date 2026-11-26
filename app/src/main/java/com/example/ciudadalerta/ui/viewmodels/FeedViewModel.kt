@@ -3,6 +3,7 @@ package com.example.ciudadalerta.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.ciudadalerta.R
 import com.example.ciudadalerta.data.SessionManager
 import com.example.ciudadalerta.data.SupabaseConfig
 import com.example.ciudadalerta.data.TicketEntity
@@ -11,6 +12,7 @@ import com.example.ciudadalerta.domain.model.TicketStatus
 import com.example.ciudadalerta.domain.model.UserRole
 import com.example.ciudadalerta.domain.usecase.ObserveTicketsUseCase
 import com.example.ciudadalerta.domain.usecase.SyncTicketsUseCase
+import com.example.ciudadalerta.ui.components.UiText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,7 +32,7 @@ data class FeedUiState(
     val userName: String = "",
     val isDarkMode: Boolean = false,
     val isSyncing: Boolean = false,
-    val syncMessage: String? = null,
+    val syncMessage: UiText? = null,
     val searchQuery: String = "",
     val selectedCategoryFilter: Int? = null,
     val onlyUrgentFilter: Boolean = false,
@@ -146,16 +148,16 @@ class FeedViewModel(
         viewModelScope.launch {
             if (!SupabaseConfig.isConfigured) {
                 _uiState.update {
-                    it.copy(syncMessage = "Falta pegar SUPABASE_URL y SUPABASE_ANON_KEY en local.properties")
+                    it.copy(syncMessage = UiText.StringResource(R.string.msg_supabase_not_configured))
                 }
                 return@launch
             }
             _uiState.update { it.copy(isSyncing = true, syncMessage = null) }
             val syncedCount = syncTicketsUseCase()
             val msg = if (syncedCount > 0) {
-                "Sincronizados $syncedCount cambio(s) con Supabase."
+                UiText.PluralResource(R.plurals.msg_sync_changes_count, syncedCount, syncedCount)
             } else {
-                "Supabase y Room están al día."
+                UiText.StringResource(R.string.msg_sync_up_to_date)
             }
             _uiState.update { it.copy(isSyncing = false, syncMessage = msg) }
         }

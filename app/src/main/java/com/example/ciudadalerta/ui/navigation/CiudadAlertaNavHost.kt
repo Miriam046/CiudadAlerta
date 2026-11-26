@@ -194,6 +194,7 @@ fun CiudadAlertaApp(
                         )
                         LoginEncargadoScreen(
                             viewModel = viewModel,
+                            isExpandedScreen = isExpandedScreen,
                             onLoginSuccess = {
                                 navController.navigate(AppRoute.Feed.route) {
                                     popUpTo(AppRoute.Login.route) { inclusive = true }
@@ -232,6 +233,7 @@ fun CiudadAlertaApp(
                         )
                         MapaIncidenciasScreen(
                             viewModel = viewModel,
+                            isExpandedScreen = isExpandedScreen,
                             onNavigateToDetail = { ticketId ->
                                 navController.navigate(AppRoute.TicketDetail.createRoute(ticketId)) {
                                     launchSingleTop = true
@@ -244,7 +246,10 @@ fun CiudadAlertaApp(
                         val viewModel: EstadisticasViewModel = viewModel(
                             factory = EstadisticasViewModelFactory(repository)
                         )
-                        EstadisticasScreen(viewModel = viewModel)
+                        EstadisticasScreen(
+                            viewModel = viewModel,
+                            isExpandedScreen = isExpandedScreen
+                        )
                     }
 
                     composable(AppRoute.CreateReport.route) {
@@ -253,6 +258,7 @@ fun CiudadAlertaApp(
                         )
                         ReportarScreen(
                             viewModel = viewModel,
+                            isExpandedScreen = isExpandedScreen,
                             onBack = { navController.popBackStack() }
                         )
                     }
@@ -267,6 +273,7 @@ fun CiudadAlertaApp(
                         )
                         DetalleTicketScreen(
                             viewModel = viewModel,
+                            isExpandedScreen = isExpandedScreen,
                             onBack = { navController.popBackStack() }
                         )
                     }

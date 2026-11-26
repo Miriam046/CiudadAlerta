@@ -3,9 +3,11 @@ package com.example.ciudadalerta.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.ciudadalerta.R
 import com.example.ciudadalerta.data.SessionManager
 import com.example.ciudadalerta.data.TicketRepository
 import com.example.ciudadalerta.domain.model.UserRole
+import com.example.ciudadalerta.ui.components.UiText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,7 +20,7 @@ data class LoginUiState(
     val email: String = "",
     val password: String = "",
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: UiText? = null
 )
 
 class LoginViewModel(
@@ -54,15 +56,15 @@ class LoginViewModel(
         if (current.isLoading) return
 
         if (email.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Por favor ingresa tu correo electrónico.") }
+            _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.err_login_empty_email)) }
             return
         }
         if (password.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Por favor ingresa tu contraseña.") }
+            _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.err_login_empty_password)) }
             return
         }
         if (current.isRegisterMode && name.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Por favor ingresa tu nombre completo.") }
+            _uiState.update { it.copy(errorMessage = UiText.StringResource(R.string.err_login_empty_name)) }
             return
         }
 
@@ -109,7 +111,7 @@ class LoginViewModel(
                                 _uiState.update {
                                     it.copy(
                                         isLoading = false,
-                                        errorMessage = "Credenciales inválidas o usuario no encontrado en el servidor."
+                                        errorMessage = UiText.StringResource(R.string.err_login_invalid_user)
                                     )
                                 }
                                 return@launch
@@ -123,14 +125,17 @@ class LoginViewModel(
                                     _uiState.update {
                                         it.copy(
                                             isLoading = false,
-                                            errorMessage = "Rol no válido recibido del servidor (idRol=${cloudUser.idRol})."
+                                            errorMessage = UiText.StringResource(
+                                                R.string.err_login_invalid_role,
+                                                cloudUser.idRol
+                                            )
                                         )
                                     }
                                     return@launch
                                 }
                             }
 
-                            resolvedName = cloudUser.nombreCompleto?.takeIf { it.isNotBlank() }
+                            resolvedName = cloudUser.nombreCompleto.takeIf { it.isNotBlank() }
                                 ?: name.ifBlank { resolvedRole.defaultName }
                         }
                     }
@@ -147,7 +152,10 @@ class LoginViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = "Error en autenticación: ${e.localizedMessage}"
+                        errorMessage = UiText.StringResource(
+                            R.string.err_login_generic,
+                            e.localizedMessage ?: ""
+                        )
                     )
                 }
             }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,8 +19,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.LocationOn
@@ -56,6 +60,7 @@ import com.example.ciudadalerta.data.TicketEntity
 import com.example.ciudadalerta.domain.model.TicketStatus
 import com.example.ciudadalerta.ui.components.CategoryBadge
 import com.example.ciudadalerta.ui.components.MinimalHeader
+import com.example.ciudadalerta.ui.components.PhotoEvidenceCard
 import com.example.ciudadalerta.ui.components.SegmentedPillToggle
 import com.example.ciudadalerta.ui.components.StatusChip
 import com.example.ciudadalerta.ui.components.UrgentBadge
@@ -69,6 +74,7 @@ import kotlin.math.roundToInt
 @Composable
 fun MapaIncidenciasScreen(
     viewModel: FeedViewModel,
+    isExpandedScreen: Boolean = false,
     onNavigateToDetail: (Int) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -88,146 +94,258 @@ fun MapaIncidenciasScreen(
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
     ) {
-        MinimalHeader(title = stringResource(R.string.map_title))
-
-        // Segmented Pill Toggle (Reference Screen 2)
-        SegmentedPillToggle(
-            firstLabel = stringResource(R.string.tab_all_reports),
-            secondLabel = stringResource(R.string.tab_urgent_reports),
-            selectedIndex = if (showUrgentOnly) 1 else 0,
-            onSelect = { showUrgentOnly = it == 1 },
-            modifier = Modifier.padding(horizontal = 20.dp)
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .clip(RoundedCornerShape(24.dp))
-        ) {
-            InteractiveUrbanMap(
-                tickets = mapTickets,
-                selectedTicketId = selectedTicket?.id,
-                onPinClick = { selectedPinId = it },
-                modifier = Modifier.fillMaxSize()
-            )
-
-            Surface(
-                color = Color(0xFF1E293B).copy(alpha = 0.78f),
-                shape = RoundedCornerShape(999.dp),
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 12.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.map_subtitle, mapTickets.size),
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
-                )
-            }
-        }
-
-        // Minimal Selected Ticket Card
-        if (selectedTicket != null) {
-            Surface(
-                shape = RoundedCornerShape(22.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        if (isExpandedScreen) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 14.dp)
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Text(
+                    text = stringResource(R.string.map_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                SegmentedPillToggle(
+                    firstLabel = stringResource(R.string.tab_all_reports),
+                    secondLabel = stringResource(R.string.tab_urgent_reports),
+                    selectedIndex = if (showUrgentOnly) 1 else 0,
+                    onSelect = { showUrgentOnly = it == 1 },
+                    modifier = Modifier.widthIn(max = 340.dp)
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                MapCanvasContainer(
+                    tickets = mapTickets,
+                    selectedTicketId = selectedTicket?.id,
+                    onPinClick = { selectedPinId = it },
+                    modifier = Modifier
+                        .weight(0.6f)
+                        .fillMaxHeight()
+                )
+
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier
+                        .weight(0.4f)
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CategoryBadge(categoriaId = selectedTicket.categoriaId)
-                            if (selectedTicket.esUrgente) {
-                                Spacer(modifier = Modifier.width(6.dp))
-                                UrgentBadge()
-                            }
-                        }
-                        StatusChip(estatusId = selectedTicket.estatusId)
-                    }
-
-                    Text(
-                        text = selectedTicket.descripcion,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = PrimaryCivicBlue,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Ticket #${selectedTicket.id} • %.4f, %.4f".format(
-                                Locale.US,
-                                selectedTicket.latitud,
-                                selectedTicket.longitud
-                            ),
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Button(
-                            onClick = { onNavigateToDetail(selectedTicket.id) },
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryCivicBlue),
-                            shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.map_view_detail),
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White
-                            )
-                        }
-                        OutlinedButton(
-                            onClick = {
+                    if (selectedTicket != null) {
+                        SelectedMapTicketCard(
+                            ticket = selectedTicket,
+                            showPhotoPreview = true,
+                            onViewDetail = { onNavigateToDetail(selectedTicket.id) },
+                            onOpenMaps = {
                                 LocationHelper.openInExternalMaps(
                                     context = context,
                                     lat = selectedTicket.latitud,
                                     lon = selectedTicket.longitud,
-                                    label = "Ticket #${selectedTicket.id}"
+                                    label = context.getString(R.string.ticket_number, selectedTicket.id)
                                 )
-                            },
-                            shape = RoundedCornerShape(14.dp)
+                            }
+                        )
+                    } else {
+                        Surface(
+                            shape = RoundedCornerShape(22.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
+                            Text(
+                                text = stringResource(R.string.map_tap_pin_hint),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(20.dp)
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Maps", fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
             }
         } else {
-            Spacer(modifier = Modifier.height(16.dp))
+            MinimalHeader(title = stringResource(R.string.map_title))
+
+            SegmentedPillToggle(
+                firstLabel = stringResource(R.string.tab_all_reports),
+                secondLabel = stringResource(R.string.tab_urgent_reports),
+                selectedIndex = if (showUrgentOnly) 1 else 0,
+                onSelect = { showUrgentOnly = it == 1 },
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            MapCanvasContainer(
+                tickets = mapTickets,
+                selectedTicketId = selectedTicket?.id,
+                onPinClick = { selectedPinId = it },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+            )
+
+            if (selectedTicket != null) {
+                SelectedMapTicketCard(
+                    ticket = selectedTicket,
+                    showPhotoPreview = false,
+                    onViewDetail = { onNavigateToDetail(selectedTicket.id) },
+                    onOpenMaps = {
+                        LocationHelper.openInExternalMaps(
+                            context = context,
+                            lat = selectedTicket.latitud,
+                            lon = selectedTicket.longitud,
+                            label = context.getString(R.string.ticket_number, selectedTicket.id)
+                        )
+                    },
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)
+                )
+            } else {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun MapCanvasContainer(
+    tickets: List<TicketEntity>,
+    selectedTicketId: Int?,
+    onPinClick: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.clip(RoundedCornerShape(24.dp))
+    ) {
+        InteractiveUrbanMap(
+            tickets = tickets,
+            selectedTicketId = selectedTicketId,
+            onPinClick = onPinClick,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        Surface(
+            color = Color(0xFF1E293B).copy(alpha = 0.78f),
+            shape = RoundedCornerShape(999.dp),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 12.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.map_subtitle, tickets.size),
+                color = Color.White,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SelectedMapTicketCard(
+    ticket: TicketEntity,
+    showPhotoPreview: Boolean,
+    onViewDetail: () -> Unit,
+    onOpenMaps: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CategoryBadge(categoriaId = ticket.categoriaId)
+                    if (ticket.esUrgente) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        UrgentBadge()
+                    }
+                }
+                StatusChip(estatusId = ticket.estatusId)
+            }
+
+            Text(
+                text = ticket.descripcion,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = if (showPhotoPreview) 4 else 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            if (showPhotoPreview) {
+                val photoSource = ticket.bestPhotoSource
+                if (photoSource != null) {
+                    PhotoEvidenceCard(fotoRuta = photoSource, categoriaId = ticket.categoriaId)
+                }
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = null,
+                    tint = PrimaryCivicBlue,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "${stringResource(R.string.ticket_number, ticket.id)} • %.4f, %.4f".format(
+                        Locale.US,
+                        ticket.latitud,
+                        ticket.longitud
+                    ),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Button(
+                    onClick = onViewDetail,
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryCivicBlue),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = stringResource(R.string.map_view_detail),
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                }
+                OutlinedButton(
+                    onClick = onOpenMaps,
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(stringResource(R.string.action_open_maps_short), fontWeight = FontWeight.SemiBold)
+                }
+            }
         }
     }
 }
@@ -262,7 +380,6 @@ private fun InteractiveUrbanMap(
             drawRect(blockColor, Offset(w * 0.68f, h * 0.36f), Size(w * 0.26f, h * 0.22f))
             drawRect(blockColor, Offset(w * 0.08f, h * 0.64f), Size(w * 0.28f, h * 0.26f))
 
-            // Soft indigo/lavender civic zones (zero green)
             val zoneColor = Color(0xFFDCE4FA)
             drawRect(zoneColor, Offset(w * 0.66f, h * 0.08f), Size(w * 0.26f, h * 0.22f))
             drawRect(zoneColor, Offset(w * 0.40f, h * 0.66f), Size(w * 0.24f, h * 0.22f))
