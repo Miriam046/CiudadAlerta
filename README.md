@@ -34,6 +34,12 @@ SUPABASE_ANON_KEY=TU_PUBLISHABLE_OR_ANON_KEY
 
 > `local.properties` está excluido en `.gitignore` para evitar subir rutas locales y llaves privadas al repositorio.
 
+## API REST en vivo (Supabase)
+
+Consulta pública de incidencias registradas en el backend (PostgREST):
+
+- [`https://jsukojmydjovfghosdaw.supabase.co/rest/v1/ticket_incidencia?select=*&apikey=sb_publishable_STxe051v9diMmlxLlk7Zsg_UR3HKYD0`](https://jsukojmydjovfghosdaw.supabase.co/rest/v1/ticket_incidencia?select=*&apikey=sb_publishable_STxe051v9diMmlxLlk7Zsg_UR3HKYD0)
+
 ## Compilación
 
 En Android Studio: **Sync Project with Gradle Files** → **Run** (`Shift+F10`).
